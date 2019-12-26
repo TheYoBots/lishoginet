@@ -14,7 +14,7 @@ POST http://lichess.org/fishnet/acquire
     "python": "2.7.11+",
     "apikey": "XXX"
   },
-  "engine": {
+  "stockfish": {
     "name": "Stockfish 7 64",
     "options": {
       "hash": "256",
@@ -60,7 +60,7 @@ POST http://lichess.org/fishnet/analysis/{work_id}
     "python": "2.7.11+",
     "apikey": "XXX"
   },
-  "engine": {
+  "stockfish": {
     "name": "Stockfish 7 64",
     "author": "T. Romstad, M. Costalba, J. Kiiski, G. Linscott"
     "options": {
@@ -118,7 +118,7 @@ POST http://lichess.org/fishnet/move/{work_id}
     "python": "2.7.11+",
     "apikey": "XXX"
   },
-  "engine": {
+  "stockfish": {
     "name": "Stockfish 7 64",
     "author": "T. Romstad, M. Costalba, J. Kiiski, G. Linscott"
     "options": {
@@ -160,7 +160,7 @@ POST http://lichess.org/fishnet/abort/{work_id}
     "python": "2.7.11+",
     "apikey": "XXX"
   },
-  "engine": {
+  "stockfish": {
     "name": "Stockfish 7 64",
     "author": "T. Romstad, M. Costalba, J. Kiiski, G. Linscott"
     "options": {
