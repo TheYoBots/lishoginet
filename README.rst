@@ -51,7 +51,7 @@ lichess.org custom Stockfish
 
 fishnet is using
 `lichess.org custom Stockfish <https://github.com/niklasf/Stockfish/tree/fishnet>`__
-by `@ddugovic <https://github.com/ddugovic/Stockfish>`_.
+by `@ddugovic, @ianfab et al <https://github.com/ddugovic/Stockfish>`_.
 
 You can build Stockfish yourself (for example with ``./build-stockfish.sh``)
 and provide the path using ``python -m fishnet --stockfish-command``. Otherwise
