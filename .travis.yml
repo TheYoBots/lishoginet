@@ -9,8 +9,6 @@ python:
  - "3.7"
 matrix:
   include:
-   - python: "pypy"
-     dist: trusty
    - python: "pypy3"
      dist: trusty
 
