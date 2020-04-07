@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# PYTHON_ARGCOMPLETE_OK
 
 # This file is part of the lichess.org fishnet client.
 # Copyright (C) 2016-2019 Niklas Fiekas <niklas.fiekas@backscattering.de>
@@ -1915,6 +1916,12 @@ def main(argv):
 
     parser.add_argument("command", default="run", nargs="?", choices=commands.keys())
 
+    try:
+        import argcomplete
+    except ImportError:
+        pass
+    else:
+        argcomplete.autocomplete(parser)
     args = parser.parse_args(argv[1:])
 
     # Setup logging
