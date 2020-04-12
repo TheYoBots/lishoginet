@@ -1154,8 +1154,6 @@ def load_conf(args):
         conf.set("Fishnet", "Cores", args.cores)
     if hasattr(args, "memory") and args.memory is not None:
         conf.set("Fishnet", "Memory", args.memory)
-    if hasattr(args, "threads") and args.threads is not None:
-        conf.set("Fishnet", "Threads", str(args.threads))
     if hasattr(args, "endpoint") and args.endpoint is not None:
         conf.set("Fishnet", "Endpoint", args.endpoint)
     if hasattr(args, "fixed_backoff") and args.fixed_backoff is not None:
@@ -1353,29 +1351,14 @@ def validate_cores(cores):
     return cores
 
 
-def validate_threads(threads, conf):
+def get_threads(conf):
     cores = validate_cores(conf_get(conf, "Cores"))
-
-    if not threads or str(threads).strip().lower() == "auto":
-        return min(DEFAULT_THREADS, cores)
-
-    try:
-        threads = int(str(threads).strip())
-    except ValueError:
-        raise ConfigError("Number of threads must be an integer")
-
-    if threads < 1:
-        raise ConfigError("Need at least one thread per engine process")
-
-    if threads > cores:
-        raise ConfigError("%d cores is not enough to run %d threads" % (cores, threads))
-
-    return threads
+    return min(DEFAULT_THREADS, cores)
 
 
 def validate_memory(memory, conf):
     cores = validate_cores(conf_get(conf, "Cores"))
-    threads = validate_threads(conf_get(conf, "Threads"), conf)
+    threads = get_threads(conf)
     processes = cores // threads
 
     if not memory or not memory.strip() or memory.strip().lower() == "auto":
@@ -1527,7 +1510,7 @@ def cmd_run(args):
     cores = validate_cores(conf_get(conf, "Cores"))
     print("Cores:            %d" % cores)
 
-    threads = validate_threads(conf_get(conf, "Threads"), conf)
+    threads = get_threads(conf)
     instances = max(1, cores // threads)
     print("Engine processes: %d (each ~%d threads)" % (instances, threads))
     memory = validate_memory(conf_get(conf, "Memory"), conf)
@@ -1543,11 +1526,13 @@ def cmd_run(args):
         for name, value in conf.items("Stockfish"):
             if name.lower() == "hash":
                 hint = " (use --memory instead)"
-            elif name.lower() == "threads":
-                hint = " (use --threads-per-process instead)"
             else:
                 hint = ""
             print(" * %s = %s%s" % (name, value, hint))
+        print()
+
+    if args.ignored_threads:
+        print("Ignored custom --threads-per-process (formerly --threads). These are deprecated.")
         print()
 
     print("### Starting workers ...")
@@ -1694,9 +1679,6 @@ def cmd_systemd(args):
     if args.memory is not None:
         builder.append("--memory")
         builder.append(shell_quote(str(validate_memory(args.memory, conf))))
-    if args.threads is not None:
-        builder.append("--threads-per-process")
-        builder.append(shell_quote(str(validate_threads(args.threads, conf))))
     if args.endpoint is not None:
         builder.append("--endpoint")
         builder.append(shell_quote(validate_endpoint(args.endpoint)))
@@ -1902,9 +1884,9 @@ def main(argv):
     g.add_argument("--endpoint", help="lichess http endpoint (default: %s)" % DEFAULT_ENDPOINT)
     g.add_argument("--engine-dir", help="engine working directory")
     g.add_argument("--stockfish-command", help="stockfish command (default: download precompiled Stockfish)")
-    g.add_argument("--threads-per-process", "--threads", type=int, dest="threads", help="hint for the number of threads to use per engine process (default: %d)" % DEFAULT_THREADS)
     g.add_argument("--fixed-backoff", action="store_true", default=None, help="fixed backoff (only recommended for move servers)")
     g.add_argument("--no-fixed-backoff", dest="fixed_backoff", action="store_false", default=None)
+    g.add_argument("--threads-per-process", "--threads", type=int, dest="ignored_threads", help="ignored. fishnet now always aims for ~%d threads per process" % DEFAULT_THREADS)
     g.add_argument("--setoption", "-o", nargs=2, action="append", default=[], metavar=("NAME", "VALUE"), help="set a custom uci option")
 
     commands = collections.OrderedDict([
