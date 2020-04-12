@@ -874,7 +874,7 @@ class Worker(threading.Thread):
                         variant, self.job_name(job, ply))
 
             part = go(self.stockfish, job["position"], moves[0:ply],
-                      nodes=nodes, movetime=4000)
+                      nodes=nodes, movetime=6000)
 
             if "mate" not in part["score"] and "time" in part and part["time"] < 100:
                 logging.warning("Very low time reported: %d ms.", part["time"])
@@ -882,6 +882,9 @@ class Worker(threading.Thread):
             if "nps" in part and part["nps"] >= 100000000:
                 logging.warning("Dropping exorbitant nps: %d", part["nps"])
                 del part["nps"]
+
+            if part.get("nodes", 0) > 100000 and part.get("nodes", 0) < nodes // 2:
+                logging.warning("Low node count in allotted time. If this happens frequently, it is better to let clients with better hardware handle the analysis.")
 
             self.nodes += part.get("nodes", 0)
             self.positions += 1
