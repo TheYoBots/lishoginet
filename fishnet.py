@@ -894,11 +894,11 @@ class Worker(threading.Thread):
 
         if num_positions:
             t = (end - start) / num_positions
-            logging.info("%s took %0.1fs (%0.2fs per position)",
+            logging.info("%s took %0.1fs (%0.1fs per position)",
                          self.job_name(job),
                          end - start, t)
             if t > 0.9 * MOVE_TIMEOUT:
-                logging.warning("Much slower than %0.2fs per position (%0.2fs). If this happens frequently, it is better to let clients with better hardware handle the analysis.",
+                logging.warning("Much slower than %0.1fs per position (%0.1fs). If this happens frequently, it is better to let clients with better hardware handle the analysis.",
                                 MOVE_TIMEOUT / 2, t)
         else:
             logging.info("%s done (nothing to do)", self.job_name(job))
