@@ -1540,7 +1540,7 @@ def cmd_run(args):
         print("Ignored custom --threads-per-process (formerly --threads). These are deprecated.")
         print()
 
-    print("### Starting workers ...")
+    print("### Starting workers (press Ctrl + C to stop) ...")
     print()
 
     buckets = [0] * instances
