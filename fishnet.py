@@ -108,7 +108,7 @@ HASH_MIN = 16
 HASH_DEFAULT = 256
 HASH_MAX = 512
 MAX_BACKOFF = 30.0
-MAX_SLOW_BACKOFF = 120.0
+MAX_SLOW_BACKOFF = 180.0
 MAX_FIXED_BACKOFF = 3.0
 MAX_MOVE_TIME = 20.0
 TARGET_MOVE_TIME = 2.0
@@ -957,11 +957,11 @@ class Worker(threading.Thread):
                 logging.warning("Extremely slow (%0.1fs per position). If this happens frequently, it is better to let clients with better hardware handle the analysis.", t)
             elif t > TARGET_MOVE_TIME and self.slow < MAX_SLOW_BACKOFF:
                 self.slow = min(self.slow * 2, MAX_SLOW_BACKOFF)
-                logging.info("Slower than %0.1fs per position (%0.1fs). Handling fewer user requests (backlog >= %0.1fs).", TARGET_MOVE_TIME, t, self.slow)
+                logging.info("Slower than %0.1fs per position (%0.1fs). Will accept only older user requests (backlog >= %0.1fs).", TARGET_MOVE_TIME, t, self.slow)
             elif t < TARGET_MOVE_TIME and self.slow > 0.1:
-                self.slow = max(self.slow / 2, 0.1)
+                self.slow = max(self.slow / 4, 0.1)
                 if self.alive and self.slow > 0.5:
-                    logging.info("Faster than %0.1fs per position (%0.1fs). Handling more user requests (backlog >= %0.1fs).", TARGET_MOVE_TIME, t, self.slow)
+                    logging.info("Faster than %0.1fs per position (%0.1fs). Will accept newer user requests (backlog >= %0.1fs).", TARGET_MOVE_TIME, t, self.slow)
                 else:
                     logging.debug("Faster than %0.1fs per position (%0.1fs). More confident in performance (backlog >= %0.1fs).", TARGET_MOVE_TIME, t, self.slow)
         else:
