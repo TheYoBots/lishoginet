@@ -1163,6 +1163,10 @@ def load_conf(args):
         conf.set("Fishnet", "Endpoint", args.endpoint)
     if hasattr(args, "fixed_backoff") and args.fixed_backoff is not None:
         conf.set("Fishnet", "FixedBackoff", str(args.fixed_backoff))
+    if hasattr(args, "user_backlog") and args.user_backlog is not None:
+        conf.set("Fishnet", "UserBacklog", args.user_backlog)
+    if hasattr(args, "system_backlog") and args.system_backlog is not None:
+        conf.set("Fishnet", "SystemBacklog", args.system_backlog)
     for option_name, option_value in args.setoption:
         conf.set("Stockfish", option_name.lower(), option_value)
 
@@ -1249,6 +1253,19 @@ def configure(args):
                          validate_cores, out)
     conf.set("Fishnet", "Cores", str(cores))
 
+    # Backlog
+    print(file=out)
+    print("You can choose to join only if a backlog is building up. Examples:", file=out)
+    print("* Rented server exlusively for fishnet: choose no", file=out)
+    print("* Running on laptop: choose yes", file=out)
+    if config_input("Would you prefer to keep your client idle? (default: no) ", parse_bool, out):
+        conf.set("Fishnet", "UserBacklog", "90s")
+        conf.set("Fishnet", "SystemBacklog", "2h")
+    else:
+        conf.set("Fishnet", "UserBacklog", "0s")
+        conf.set("Fishnet", "SystemBacklog", "0s")
+    print(file=out)
+
     # Advanced options
     endpoint = args.endpoint or DEFAULT_ENDPOINT
     if config_input("Configure advanced options? (default: no) ", parse_bool, out):
@@ -1269,6 +1286,7 @@ def configure(args):
                            lambda v: validate_key(v, conf, network=True), out)
     conf.set("Fishnet", "Key", key)
     logging.getLogger().addFilter(CensorLogFilter(key))
+
 
     # Confirm
     print(file=out)
@@ -1332,7 +1350,38 @@ def parse_bool(inp, default=False):
     elif inp in ["n", "no", "nop", "nope", "f", "false", "0"]:
         return False
     else:
-        raise ConfigError("Not a boolean value: %s", inp)
+        raise ConfigError("Not a boolean value: %s" % (inp, ))
+
+
+def parse_duration(inp, default=0):
+    if not inp:
+        return default
+
+    stripped = inp.strip().lower()
+    if not stripped:
+        return default
+
+    factor = 1
+    if stripped.endswith("s"):
+        stripped = stripped[:-1].rstrip()
+    elif inp.endswith("m"):
+        factor = 60
+        stripped = stripped[:-1].rstrip()
+    elif inp.endswith("h"):
+        factor = 60 * 60
+        stripped = stripped[:-1].rstrip()
+    elif inp.endswith("d"):
+        factor = 60 * 60 * 24
+        stripped = stripped[:-1].rstrip()
+
+    try:
+        return int(stripped) * factor
+    except ValueError:
+        raise ConfigError("Not a valid duration: %s" % (inp, ))
+
+
+def validate_backlog(conf):
+    return parse_duration(conf_get(conf, "UserBacklog")), parse_duration(conf_get(conf, "SystemBacklog"))
 
 
 def validate_cores(cores):
@@ -1523,6 +1572,9 @@ def cmd_run(args):
     endpoint = get_endpoint(conf)
     warning = "" if endpoint.startswith("https://") else " (WARNING: not using https)"
     print("Endpoint:         %s%s" % (endpoint, warning))
+    user_backlog, system_backlog = validate_backlog(conf)
+    print("UserBacklog:      %ds" % user_backlog)
+    print("SystemBacklog:    %ds" % system_backlog)
     print("FixedBackoff:     %s" % parse_bool(conf_get(conf, "FixedBackoff")))
     print()
 
@@ -1689,6 +1741,12 @@ def cmd_systemd(args):
         builder.append(shell_quote(validate_endpoint(args.endpoint)))
     if args.fixed_backoff is not None:
         builder.append("--fixed-backoff" if args.fixed_backoff else "--no-fixed-backoff")
+    if args.user_backlog is not None:
+        builder.append("--user-backlog")
+        builder.append("%ds" % parse_duration(args.user_backlog))
+    if args.system_backlog is not None:
+        builder.append("--system-backlog")
+        builder.append("%ds" % parse_duration(args.system_backlog))
     for option_name, option_value in args.setoption:
         builder.append("--setoption")
         builder.append(shell_quote(option_name))
@@ -1891,6 +1949,8 @@ def main(argv):
     g.add_argument("--stockfish-command", help="stockfish command (default: download precompiled Stockfish)")
     g.add_argument("--fixed-backoff", action="store_true", default=None, help="fixed backoff (only recommended for move servers)")
     g.add_argument("--no-fixed-backoff", dest="fixed_backoff", action="store_false", default=None)
+    g.add_argument("--user-backlog", type=str, help="run high-priority jobs only if older than this duration (for example 90s)")
+    g.add_argument("--system-backlog", type=str, help="run low-priority jobs only if older than this duration (for example 2h)")
     g.add_argument("--threads-per-process", "--threads", type=int, dest="ignored_threads", help="ignored. fishnet now always aims for ~%d threads per process" % DEFAULT_THREADS)
     g.add_argument("--setoption", "-o", nargs=2, action="append", default=[], metavar=("NAME", "VALUE"), help="set a custom uci option")
 
