@@ -582,11 +582,14 @@ class ProgressReporter(threading.Thread):
 
 
 class Worker(threading.Thread):
-    def __init__(self, conf, threads, memory, progress_reporter):
+    def __init__(self, conf, threads, memory, user_backlog, system_backlog, progress_reporter):
         super(Worker, self).__init__()
         self.conf = conf
         self.threads = threads
         self.memory = memory
+        self.user_backlog = user_backlog
+        self.system_backlog = system_backlog
+        self.slow = 90.0
 
         self.progress_reporter = progress_reporter
 
@@ -664,21 +667,36 @@ class Worker(threading.Thread):
             return
 
         try:
+            # Determine extra wait time based on queue status
+            backlog_wait, slow = self.backlog_wait_time()
+
+            params = {}
+            if not self.alive or backlog_wait > 0:
+                params["stop"] = "true"
+            if slow:
+                params["slow"] = "true"
+
             # Report result and fetch next job
-            response = self.http.post(get_endpoint(self.conf, path),
-                                      params={} if self.alive else {"stop": "true"},
-                                      json=request,
-                                      timeout=HTTP_TIMEOUT)
+            if path != "acquire" or "stop" not in params:
+                response = self.http.post(get_endpoint(self.conf, path),
+                                          params=params,
+                                          json=request,
+                                          timeout=HTTP_TIMEOUT)
+            else:
+                response = None
         except requests.RequestException as err:
             self.job = None
             t = next(self.backoff)
             logging.error("Backing off %0.1fs after failed request (%s)", t, err)
             self.sleep.wait(t)
         else:
-            if response.status_code == 204:
+            # Handle response.
+            if response is None:
+                pass
+            elif response.status_code == 204:
                 self.job = None
                 t = next(self.backoff)
-                logging.debug("No job found. Backing off %0.1fs", t)
+                logging.debug("No job received. Backing off %0.1fs", t)
                 self.sleep.wait(t)
             elif response.status_code == 202:
                 logging.debug("Got job: %s", response.text)
@@ -709,6 +727,33 @@ class Worker(threading.Thread):
                 t = next(self.backoff)
                 logging.error("Unexpected HTTP status for acquire: %d", response.status_code)
                 self.sleep.wait(t)
+
+            # Idle the client for some time.
+            if self.alive and self.job is None and backlog_wait > 0:
+                if backlog_wait >= 90:
+                    logging.info("Going idle for %dm", round(backlog_wait / 60))
+                else:
+                    logging.debug("Going idle for %0.1fs", backlog_wait)
+                self.sleep.wait(backlog_wait)
+
+    def backlog_wait_time(self):
+        user_backlog = self.user_backlog + self.slow
+        if user_backlog >= 1 or self.system_backlog >= 1:
+            try:
+                response = self.http.get(get_endpoint(self.conf, "status"), timeout=HTTP_TIMEOUT)
+                if response.status_code == 200:
+                    status = response.json()
+                    user_wait = max(0, user_backlog - status["analysis"]["user"]["oldest"])
+                    system_wait = max(0, self.system_backlog - status["analysis"]["system"]["oldest"])
+                    slow = user_wait > system_wait
+                    return min(user_wait, system_wait), slow
+                else:
+                    logging.error("Unexpected HTTP status for status: %d", response.status_code)
+            except requests.RequestException:
+                logging.error("Could not get status. Continuing.")
+            except KeyError:
+                logging.warning("Incompatible status response. Continuing.")
+        return 0, self.slow >= 1
 
     def abort_job(self):
         if self.job is None:
@@ -1288,7 +1333,6 @@ def configure(args):
     conf.set("Fishnet", "Key", key)
     logging.getLogger().addFilter(CensorLogFilter(key))
 
-
     # Confirm
     print(file=out)
     while not config_input("Done. Write configuration to %s now? (default: yes) " % (config_file, ),
@@ -1604,7 +1648,7 @@ def cmd_run(args):
     progress_reporter.setDaemon(True)
     progress_reporter.start()
 
-    workers = [Worker(conf, bucket, memory // instances, progress_reporter) for bucket in buckets]
+    workers = [Worker(conf, bucket, memory // instances, user_backlog, system_backlog, progress_reporter) for bucket in buckets]
 
     # Start all threads
     for i, worker in enumerate(workers):
