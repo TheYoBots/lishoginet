@@ -749,6 +749,9 @@ class Worker(threading.Thread):
                     system_wait = max(1.0, self.system_backlog - status["analysis"]["system"]["oldest"])
                     slow = user_wait > system_wait
                     return min(user_wait, system_wait), slow
+                elif response.status_code == 404:
+                    # Status deliberately not implemented (for example lila-fishnet)
+                    return 0, False
                 else:
                     logging.error("Unexpected HTTP status for status: %d", response.status_code)
             except requests.RequestException:
@@ -880,6 +883,8 @@ class Worker(threading.Thread):
         logging.log(PROGRESS, "Played move in %s (%s) with lvl %d: %0.3fs elapsed, depth %d",
                     self.job_name(job), variant,
                     lvl, end - start, part.get("depth", 0))
+
+        self.slow = 0.1  # move clients are trusted to be fast
 
         self.nodes += part.get("nodes", 0)
         self.positions += 1

@@ -210,3 +210,28 @@ GET http://lichess.org/fishnet/status
   }
 }
 ```
+
+Or queue monitoring is not supported (for example lila-fishnet):
+
+```
+404 Not found
+```
+
+Key validation
+--------------
+
+```
+GET http://lichess.org/fishnet/key/XXX
+```
+
+Key valid:
+
+```
+200 Ok
+```
+
+Key invalid/inactive:
+
+```
+404 Not found
+```
