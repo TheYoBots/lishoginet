@@ -666,6 +666,7 @@ class Worker(threading.Thread):
         try:
             # Report result and fetch next job
             response = self.http.post(get_endpoint(self.conf, path),
+                                      params={} if self.alive else {"stop": "true"},
                                       json=request,
                                       timeout=HTTP_TIMEOUT)
         except requests.RequestException as err:
