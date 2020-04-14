@@ -693,9 +693,7 @@ class Worker(threading.Thread):
             self.sleep.wait(t)
         else:
             # Handle response.
-            if response is None:
-                pass
-            elif response.status_code == 204:
+            if response is None or response.status_code == 204:
                 self.job = None
                 t = next(self.backoff)
                 logging.debug("No job received. Backing off %0.1fs", t)
