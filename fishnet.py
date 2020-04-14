@@ -739,6 +739,9 @@ class Worker(threading.Thread):
                 self.sleep.wait(backlog_wait)
 
     def backlog_wait_time(self):
+        if not self.alive:
+            return 0, False
+
         user_backlog = self.user_backlog + self.slow
         if user_backlog >= 1 or self.system_backlog >= 1:
             try:
@@ -957,7 +960,7 @@ class Worker(threading.Thread):
                 logging.info("Slower than %0.1fs per position (%0.1fs). Handling fewer user requests (backlog >= %0.1fs).", TARGET_MOVE_TIME, t, self.slow)
             elif t < TARGET_MOVE_TIME and self.slow > 0.1:
                 self.slow = max(self.slow / 2, 0.1)
-                if self.slow > 0.5:
+                if self.alive and self.slow > 0.5:
                     logging.info("Faster than %0.1fs per position (%0.1fs). Handling more user requests (backlog >= %0.1fs).", TARGET_MOVE_TIME, t, self.slow)
                 else:
                     logging.debug("Faster than %0.1fs per position (%0.1fs). More confident in performance (backlog >= %0.1fs).", TARGET_MOVE_TIME, t, self.slow)
