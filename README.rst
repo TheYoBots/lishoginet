@@ -7,9 +7,6 @@ fishnet: distributed Stockfish analysis for lichess.org
 .. image:: https://travis-ci.org/niklasf/fishnet.svg?branch=master
     :target: https://travis-ci.org/niklasf/fishnet
 
-.. image:: https://coveralls.io/repos/github/niklasf/fishnet/badge.svg?branch=master
-    :target: https://coveralls.io/github/niklasf/fishnet?branch=master
-
 Installation
 ------------
 
