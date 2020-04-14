@@ -746,8 +746,8 @@ class Worker(threading.Thread):
                 if response.status_code == 200:
                     status = response.json()
                     user_wait = max(0, user_backlog - status["analysis"]["user"]["oldest"])
-                    system_wait = max(1.0, self.system_backlog - status["analysis"]["system"]["oldest"])
-                    slow = user_wait > system_wait
+                    system_wait = max(0, self.system_backlog - status["analysis"]["system"]["oldest"])
+                    slow = user_wait >= system_wait + 1.0
                     return min(user_wait, system_wait), slow
                 elif response.status_code == 404:
                     # Status deliberately not implemented (for example lila-fishnet)
