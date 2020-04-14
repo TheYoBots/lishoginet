@@ -130,6 +130,12 @@ POST http://lichess.org/fishnet/move/{work_id}
 }
 ```
 
+Query parameters:
+
+* `?slow=true`: Do not acquire user requested analysis. Speed is not important
+  for system requested analysis.
+* `?stop=true`: Submit result. Do not acquire next job.
+
 Accepted:
 
 ```
@@ -175,4 +181,32 @@ Response:
 
 ```
 204 No Content
+```
+
+Status
+------
+
+Useful to monitor and react to queue status or spawn spot instances.
+
+```
+GET http://lichess.org/fishnet/status
+```
+
+```javascript
+200 OK
+
+{
+  "analysis": {
+    "user": { // User requested analysis. Respond as soon as possible.
+      "acquired": 156,
+      "queued": 5415,
+      "oldest": 123 // Longest time in queue, in seconds
+    },
+    "system": { // System requested analysis. Low priority.
+      "acquired": 2,
+      "queued": 32415,
+      "oldest": 12345
+    }
+  }
+}
 ```
