@@ -732,8 +732,10 @@ class Worker(threading.Thread):
 
             # Idle the client for some time.
             if self.alive and self.job is None and backlog_wait > 0:
-                if backlog_wait >= 90:
+                if backlog_wait >= 120:
                     logging.info("Going idle for %dm", round(backlog_wait / 60))
+                elif backlog_wait >= 10:
+                    logging.info("Going idle for %0.1fs", backlog_wait)
                 else:
                     logging.debug("Going idle for %0.1fs", backlog_wait)
                 self.sleep.wait(backlog_wait)
