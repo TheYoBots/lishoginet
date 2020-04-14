@@ -108,8 +108,10 @@ HASH_MIN = 16
 HASH_DEFAULT = 256
 HASH_MAX = 512
 MAX_BACKOFF = 30.0
+MAX_SLOW_BACKOFF = 120.0
 MAX_FIXED_BACKOFF = 3.0
-MOVE_TIMEOUT = 4.0
+MAX_MOVE_TIME = 20.0
+TARGET_MOVE_TIME = 3.0
 HTTP_TIMEOUT = 15.0
 STAT_INTERVAL = 60.0
 DEFAULT_CONFIG = "fishnet.ini"
@@ -589,7 +591,7 @@ class Worker(threading.Thread):
         self.memory = memory
         self.user_backlog = user_backlog
         self.system_backlog = system_backlog
-        self.slow = 90.0
+        self.slow = MAX_BACKOFF
 
         self.progress_reporter = progress_reporter
 
@@ -744,7 +746,7 @@ class Worker(threading.Thread):
                 if response.status_code == 200:
                     status = response.json()
                     user_wait = max(0, user_backlog - status["analysis"]["user"]["oldest"])
-                    system_wait = max(0, self.system_backlog - status["analysis"]["system"]["oldest"])
+                    system_wait = max(1.0, self.system_backlog - status["analysis"]["system"]["oldest"])
                     slow = user_wait > system_wait
                     return min(user_wait, system_wait), slow
                 else:
@@ -753,7 +755,7 @@ class Worker(threading.Thread):
                 logging.error("Could not get status. Continuing.")
             except KeyError:
                 logging.warning("Incompatible status response. Continuing.")
-        return 0, self.slow >= 1
+        return 0, self.slow >= 1.0
 
     def abort_job(self):
         if self.job is None:
@@ -921,7 +923,7 @@ class Worker(threading.Thread):
                         variant, self.job_name(job, ply))
 
             part = go(self.stockfish, job["position"], moves[0:ply],
-                      nodes=nodes, movetime=int(MOVE_TIMEOUT * 1000))
+                      nodes=nodes, movetime=int(MAX_MOVE_TIME * 1000))
 
             if part["score"].get("cp") and "time" in part and part["time"] < 100:
                 logging.warning("Very low time reported: %d ms.", part["time"])
@@ -943,9 +945,17 @@ class Worker(threading.Thread):
             logging.info("%s took %0.1fs (%0.1fs per position)",
                          self.job_name(job),
                          end - start, t)
-            if t > 0.9 * MOVE_TIMEOUT:
-                logging.warning("Much slower than %0.1fs per position (%0.1fs). If this happens frequently, it is better to let clients with better hardware handle the analysis.",
-                                MOVE_TIMEOUT / 2, t)
+            if t > MAX_MOVE_TIME:
+                logging.warning("Extremely slow (%0.1fs per position). If this happens frequently, it is better to let clients with better hardware handle the analysis.", t)
+            elif t > TARGET_MOVE_TIME and self.slow < MAX_SLOW_BACKOFF:
+                self.slow = min(self.slow * 2, MAX_SLOW_BACKOFF)
+                logging.info("Slower than %0.1fs per position (%0.1fs). Handling fewer user requests (backlog >= %0.1fs).", TARGET_MOVE_TIME, t, self.slow)
+            elif t < TARGET_MOVE_TIME and self.slow > 0.1:
+                self.slow = max(self.slow / 2, 0.1)
+                if self.slow > 0.5:
+                    logging.info("Faster than %0.1fs per position (%0.1fs). Handling more user requests (backlog >= %0.1fs).", TARGET_MOVE_TIME, t, self.slow)
+                else:
+                    logging.debug("Faster than %0.1fs per position (%0.1fs). More confident in performance (backlog >= %0.1fs).", TARGET_MOVE_TIME, t, self.slow)
         else:
             logging.info("%s done (nothing to do)", self.job_name(job))
 
