@@ -2012,8 +2012,8 @@ def main(argv):
     g.add_argument("--stockfish-command", help="stockfish command (default: download precompiled Stockfish)")
     g.add_argument("--fixed-backoff", action="store_true", default=None, help="fixed backoff (only recommended for move servers)")
     g.add_argument("--no-fixed-backoff", dest="fixed_backoff", action="store_false", default=None)
-    g.add_argument("--user-backlog", type=str, help="run high-priority jobs only if older than this duration (for example 90s)")
-    g.add_argument("--system-backlog", type=str, help="run low-priority jobs only if older than this duration (for example 2h)")
+    g.add_argument("--user-backlog", type=str, help="prefer to run high-priority jobs only if older than this duration (for example 90s)")
+    g.add_argument("--system-backlog", type=str, help="prefer to run low-priority jobs only if older than this duration (for example 2h)")
     g.add_argument("--threads-per-process", "--threads", type=int, dest="ignored_threads", help="ignored. fishnet now always aims for ~%d threads per process" % DEFAULT_THREADS)
     g.add_argument("--setoption", "-o", nargs=2, action="append", default=[], metavar=("NAME", "VALUE"), help="set a custom uci option")
 
