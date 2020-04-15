@@ -965,9 +965,9 @@ class Worker(threading.Thread):
             elif t < TARGET_MOVE_TIME and self.slow > 0.1:
                 self.slow = max(self.slow / 2, 0.1)
                 if self.alive and self.slow > 0.5:
-                    logging.info("Faster than %0.1fs per position (%0.1fs). Will accept newer user requests (backlog >= %0.1fs).", TARGET_MOVE_TIME, t, self.slow)
+                    logging.info("Nice, faster than %0.1fs per position (%0.1fs)! Will accept younger user requests (backlog >= %0.1fs).", TARGET_MOVE_TIME, t, self.slow)
                 else:
-                    logging.debug("Faster than %0.1fs per position (%0.1fs). More confident in performance (backlog >= %0.1fs).", TARGET_MOVE_TIME, t, self.slow)
+                    logging.debug("Nice, faster than %0.1fs per position (%0.1fs)! More confident in performance (backlog >= %0.1fs).", TARGET_MOVE_TIME, t, self.slow)
         else:
             logging.info("%s done (nothing to do)", self.job_name(job))
 
