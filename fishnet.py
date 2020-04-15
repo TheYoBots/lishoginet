@@ -101,6 +101,7 @@ __author__ = "Niklas Fiekas"
 __email__ = "niklas.fiekas@backscattering.de"
 __license__ = "GPLv3+"
 
+DEFAULT_CONFIG = "fishnet.ini"
 DEFAULT_ENDPOINT = "https://lichess.org/fishnet/"
 STOCKFISH_RELEASES = "https://api.github.com/repos/niklasf/Stockfish/releases/latest"
 DEFAULT_THREADS = 3
@@ -108,13 +109,12 @@ HASH_MIN = 16
 HASH_DEFAULT = 256
 HASH_MAX = 512
 MAX_BACKOFF = 30.0
-MAX_SLOW_BACKOFF = 360.0
 MAX_FIXED_BACKOFF = 3.0
-MAX_MOVE_TIME = 20.0
 TARGET_MOVE_TIME = 2.0
+MAX_MOVE_TIME = 6.0
+MAX_SLOW_BACKOFF = (MAX_MOVE_TIME - TARGET_MOVE_TIME) * 60  # time diff * plies
 HTTP_TIMEOUT = 15.0
 STAT_INTERVAL = 60.0
-DEFAULT_CONFIG = "fishnet.ini"
 PROGRESS_REPORT_INTERVAL = 5.0
 CHECK_PYPI_CHANCE = 0.01
 LVL_SKILL = [0, 3, 6, 10, 14, 16, 18, 20]
@@ -957,8 +957,8 @@ class Worker(threading.Thread):
             logging.info("%s took %0.1fs (%0.1fs per position)",
                          self.job_name(job),
                          end - start, t)
-            if t > MAX_MOVE_TIME:
-                logging.warning("Extremely slow (%0.1fs per position). If this happens frequently, it is better to let clients with better hardware handle the analysis.", t)
+            if t > 0.95 * MAX_MOVE_TIME:
+                logging.warning("Extremely slow (%0.1fs per position). If this happens frequently, it is better to stop and defer to clients with better hardware.", t)
             elif t > TARGET_MOVE_TIME and self.slow < MAX_SLOW_BACKOFF:
                 self.slow = min(self.slow * 2, MAX_SLOW_BACKOFF)
                 logging.info("Slower than %0.1fs per position (%0.1fs). Will accept only older user requests (backlog >= %0.1fs).", TARGET_MOVE_TIME, t, self.slow)
