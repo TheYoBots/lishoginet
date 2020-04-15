@@ -38,7 +38,7 @@ setuptools.setup(
     description=fishnet["__doc__"].replace("\n", " ").strip(),
     long_description=read_description(),
     long_description_content_type="text/x-rst",
-    keywords="lichess.org chess stockfish uci",
+    keywords="lichess.org lichess chess stockfish uci",
     url="https://github.com/niklasf/fishnet",
     py_modules=["fishnet"],
     test_suite="test",
@@ -59,6 +59,7 @@ setuptools.setup(
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
         "Topic :: Games/Entertainment :: Board Games",
         "Topic :: Internet :: WWW/HTTP",
     ]
