@@ -3,7 +3,7 @@
 # PYTHON_ARGCOMPLETE_OK
 
 # This file is part of the lichess.org fishnet client.
-# Copyright (C) 2016-2019 Niklas Fiekas <niklas.fiekas@backscattering.de>
+# Copyright (c) 2016-2020 Niklas Fiekas <niklas.fiekas@backscattering.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -95,7 +95,7 @@ except NameError:
     DEAD_ENGINE_ERRORS = (EOFError, IOError)
 
 
-__version__ = "1.17.0"  # remember to update changelog
+__version__ = "1.17.1"  # remember to update changelog
 
 __author__ = "Niklas Fiekas"
 __email__ = "niklas.fiekas@backscattering.de"

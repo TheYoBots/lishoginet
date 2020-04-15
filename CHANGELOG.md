@@ -1,6 +1,11 @@
 Changelog for fishnet
 =====================
 
+v1.17.1
+-------
+
+* Bring back `--threads-per-process`. Most contributors should not use this.
+
 v1.17.0
 -------
 
