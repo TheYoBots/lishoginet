@@ -750,6 +750,9 @@ class Worker(threading.Thread):
                     status = response.json()
                     user_wait = max(0, user_backlog - status["analysis"]["user"]["oldest"])
                     system_wait = max(0, self.system_backlog - status["analysis"]["system"]["oldest"])
+                    logging.debug("User wait: %0.1fs due to %0.1fs for oldest %0.1fs, system wait %0.1fs due to %0.1fs for oldest %0.1fs",
+                                  user_wait, user_backlog, status["analysis"]["user"]["oldest"],
+                                  system_wait, self.system_backlog, status["analysis"]["system"]["oldest"])
                     slow = user_wait >= system_wait + 1.0
                     return min(user_wait, system_wait), slow
                 elif response.status_code == 404:
