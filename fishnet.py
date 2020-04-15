@@ -732,10 +732,9 @@ class Worker(threading.Thread):
             if self.alive and self.job is None and backlog_wait > 0:
                 if backlog_wait >= 120:
                     logging.info("Going idle for %dm", round(backlog_wait / 60))
-                elif backlog_wait >= 10:
-                    logging.info("Going idle for %0.1fs", backlog_wait)
                 else:
-                    logging.debug("Going idle for %0.1fs", backlog_wait)
+                    logging.log(logging.INFO if backlog_wait >= 10 else logging.DEBUG,
+                                "Going idle for %0.1fs", backlog_wait)
                 self.sleep.wait(backlog_wait)
 
     def backlog_wait_time(self):
@@ -750,7 +749,7 @@ class Worker(threading.Thread):
                     status = response.json()
                     user_wait = max(0, user_backlog - status["analysis"]["user"]["oldest"])
                     system_wait = max(0, self.system_backlog - status["analysis"]["system"]["oldest"])
-                    logging.debug("User wait: %0.1fs due to %0.1fs for oldest %0.1fs, system wait %0.1fs due to %0.1fs for oldest %0.1fs",
+                    logging.debug("User wait: %0.1fs due to %0.1fs for oldest %0.1fs, system wait: %0.1fs due to %0.1fs for oldest %0.1fs",
                                   user_wait, user_backlog, status["analysis"]["user"]["oldest"],
                                   system_wait, self.system_backlog, status["analysis"]["system"]["oldest"])
                     slow = user_wait >= system_wait + 1.0
