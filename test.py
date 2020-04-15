@@ -31,6 +31,8 @@ class WorkerTest(unittest.TestCase):
         self.worker = fishnet.Worker(conf,
             threads=multiprocessing.cpu_count(),
             memory=32,
+            user_backlog=0,
+            system_backlog=0,
             progress_reporter=None)
         self.worker.start_stockfish()
 
@@ -145,6 +147,10 @@ class UnitTests(unittest.TestCase):
         self.assertEqual(fishnet.parse_bool("no"), False)
         self.assertEqual(fishnet.parse_bool(""), False)
         self.assertEqual(fishnet.parse_bool("", default=True), True)
+
+    def test_parse_duration(self):
+        self.assertEqual(fishnet.parse_duration("1m"), 60)
+        self.assertEqual(fishnet.parse_duration("2 s"), 2)
 
 
 if __name__ == "__main__":
