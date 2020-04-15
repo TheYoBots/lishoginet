@@ -2037,12 +2037,12 @@ def main(argv):
     g.add_argument("--engine-dir", help="engine working directory")
     g.add_argument("--stockfish-command", help="stockfish command (default: download precompiled Stockfish)")
     g.add_argument("--threads-per-process", type=int, help="hint for the number of threads to use per engine process (default: %d)" % DEFAULT_THREADS)
-    g.add_argument("--fixed-backoff", action="store_true", default=None, help="fixed backoff (only recommended for move servers)")
-    g.add_argument("--no-fixed-backoff", dest="fixed_backoff", action="store_false", default=None)
     g.add_argument("--user-backlog", type=str, help="prefer to run high-priority jobs only if older than this duration (for example 120s)")
     g.add_argument("--system-backlog", type=str, help="prefer to run low-priority jobs only if older than this duration (for example 2h)")
-    g.add_argument("--setoption", "-o", nargs=2, action="append", default=[], metavar=("NAME", "VALUE"), help="set a custom uci option")
-    g.add_argument("--threads", type=int, dest="ignored_threads", help=argparse.SUPPRESS)
+    g.add_argument("--fixed-backoff", action="store_true", default=None, help="only for developers: do not use exponential backoff")
+    g.add_argument("--no-fixed-backoff", dest="fixed_backoff", action="store_false", default=None)
+    g.add_argument("--setoption", "-o", nargs=2, action="append", default=[], metavar=("NAME", "VALUE"), help="only for developers: set a custom uci option")
+    g.add_argument("--threads", type=int, dest="ignored_threads", help=argparse.SUPPRESS)  # bc
 
     commands = collections.OrderedDict([
         ("run", cmd_run),
