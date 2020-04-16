@@ -27,11 +27,13 @@ Installation
 
        python -m fishnet --auto-update
 
-   Optional: Generate a systemd service file:
+   Other useful commands:
 
    ::
 
-       python -m fishnet systemd
+       python -m fishnet configure  # Rerun the configuration dialog
+       python -m fishnet systemd  # Generate a systemd service file
+       python -m fishnet --help  # List all commands and options
 
    **Via Docker**
 
