@@ -747,9 +747,9 @@ class Worker(threading.Thread):
                 response = self.http.get(get_endpoint(self.conf, "status"), timeout=HTTP_TIMEOUT)
                 if response.status_code == 200:
                     status = response.json()
-                    user_oldest = status["analysis"]["user"]["oldest"] if status["analysis"]["user"]["queued"] else 0
+                    user_oldest = max(0, status["analysis"]["user"]["oldest"])
                     user_wait = max(0, user_backlog - user_oldest)
-                    system_oldest = status["analysis"]["system"]["oldest"] if status["analysis"]["system"]["queued"] else 0
+                    system_oldest = max(0, status["analysis"]["system"]["oldest"])
                     system_wait = max(0, self.system_backlog - system_oldest)
                     logging.debug("User wait: %0.1fs due to %0.1fs for oldest %0.1fs, system wait: %0.1fs due to %0.1fs for oldest %0.1fs",
                                   user_wait, user_backlog, user_oldest,
