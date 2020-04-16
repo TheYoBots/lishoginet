@@ -759,8 +759,11 @@ class Worker(threading.Thread):
                 elif response.status_code == 404:
                     # Status deliberately not implemented (for example lila-fishnet)
                     return 0, False
+                elif response.status_code == 429:
+                    logging.error("Too many requests while checking queue status. Waiting 60s ...")
+                    self.sleep.wait(60)
                 else:
-                    logging.error("Unexpected HTTP status for status: %d", response.status_code)
+                    logging.error("Unexpected HTTP status while checking queue status: %d", response.status_code)
             except requests.RequestException:
                 logging.error("Could not get status. Continuing.")
             except KeyError:
