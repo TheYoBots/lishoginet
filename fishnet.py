@@ -555,7 +555,7 @@ class ProgressReporter(threading.Thread):
         try:
             self.queue.put_nowait((path, data))
         except queue.Full:
-            logging.debug("Could not keep up with progress reports. Dropping one.")
+            logging.debug("Could not keep up with progress reports. Progress reports are expendable. Dropping one.")
 
     def stop(self):
         while not self.queue.empty():
@@ -578,9 +578,9 @@ class ProgressReporter(threading.Thread):
                     logging.error("Too many requests. Suspending progress reports for 60s ...")
                     time.sleep(60.0)
                 elif response.status_code != 204:
-                    logging.error("Expected status 204 for progress report, got %d", response.status_code)
+                    logging.error("Expected status 204 for progress report, got %d. Progress reports are expandable.", response.status_code)
             except requests.RequestException as err:
-                logging.warning("Could not send progress report (%s). Continuing.", err)
+                logging.warning("Could not send progress report (%s). Progress reports are expendable. Continuing.", err)
 
 
 class Worker(threading.Thread):
