@@ -1329,8 +1329,8 @@ def configure(args):
     print("* Rented server exlusively for fishnet: choose no", file=out)
     print("* Running on laptop: choose yes", file=out)
     if config_input("Would you prefer to keep your client idle? (default: no) ", parse_bool, out):
-        conf.set("Fishnet", "UserBacklog", "120s")
-        conf.set("Fishnet", "SystemBacklog", "2h")
+        conf.set("Fishnet", "UserBacklog", "short")
+        conf.set("Fishnet", "SystemBacklog", "long")
     else:
         conf.set("Fishnet", "UserBacklog", "0s")
         conf.set("Fishnet", "SystemBacklog", "0s")
@@ -1429,6 +1429,10 @@ def parse_duration(inp, default=0):
     stripped = inp.strip().lower()
     if not stripped:
         return default
+    elif stripped == "short":
+        return 60
+    elif stripped == "long":
+        return 60 * 60
 
     factor = 1
     if stripped.endswith("s"):
