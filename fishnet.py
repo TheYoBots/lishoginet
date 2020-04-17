@@ -2030,7 +2030,7 @@ def main(argv):
     parser.add_argument("--version", action="version", version="fishnet v{0}".format(__version__))
 
     g = parser.add_argument_group("configuration")
-    g.add_argument("--auto-update", action="store_true", help="automatically install available updates")
+    g.add_argument("--auto-update", action="store_true", help="automatically install available updates on startup and at random intervals")
     g.add_argument("--conf", help="configuration file")
     g.add_argument("--no-conf", action="store_true", help="do not use a configuration file")
     g.add_argument("--key", "--apikey", "-k", help="fishnet api key")
@@ -2042,7 +2042,7 @@ def main(argv):
     g = parser.add_argument_group("advanced")
     g.add_argument("--endpoint", help="lichess http endpoint (default: %s)" % DEFAULT_ENDPOINT)
     g.add_argument("--engine-dir", help="engine working directory")
-    g.add_argument("--stockfish-command", help="stockfish command (default: download precompiled Stockfish)")
+    g.add_argument("--stockfish-command", help="stockfish command (default: download latest precompiled Stockfish)")
     g.add_argument("--threads-per-process", type=int, help="hint for the number of threads to use per engine process (default: %d)" % DEFAULT_THREADS)
     g.add_argument("--user-backlog", type=str, help="prefer to run high-priority jobs only if older than this duration (for example 120s)")
     g.add_argument("--system-backlog", type=str, help="prefer to run low-priority jobs only if older than this duration (for example 2h)")
