@@ -673,7 +673,7 @@ class Worker(threading.Thread):
             backlog_wait, slow = self.backlog_wait_time()
 
             params = {}
-            if not self.alive or backlog_wait > 0:
+            if not self.is_alive() or backlog_wait > 0:
                 params["stop"] = "true"
             if slow:
                 params["slow"] = "true"
@@ -729,7 +729,7 @@ class Worker(threading.Thread):
                 self.sleep.wait(t)
 
             # Idle the client for some time.
-            if self.alive and self.job is None and backlog_wait > 0:
+            if self.is_alive() and self.job is None and backlog_wait > 0:
                 if backlog_wait >= 120:
                     logging.info("Going idle for %dm", round(backlog_wait / 60))
                 else:
@@ -738,7 +738,7 @@ class Worker(threading.Thread):
                 self.sleep.wait(backlog_wait)
 
     def backlog_wait_time(self):
-        if not self.alive:
+        if not self.is_alive():
             return 0, False
 
         user_backlog = self.user_backlog + self.slow
@@ -967,7 +967,7 @@ class Worker(threading.Thread):
                 logging.info("Slower than %0.1fs per position (%0.1fs). Will accept only older user requests (backlog >= %0.1fs).", TARGET_MOVE_TIME, t, self.slow)
             elif t < TARGET_MOVE_TIME - 0.1 and self.slow > 0.1:
                 self.slow = max(self.slow / 2, 0.1)
-                if self.alive and self.slow > 0.5:
+                if self.is_alive() and self.slow > 0.5:
                     logging.info("Nice, faster than %0.1fs per position (%0.1fs)! Will accept younger user requests (backlog >= %0.1fs).", TARGET_MOVE_TIME, t, self.slow)
                 else:
                     logging.debug("Nice, faster than %0.1fs per position (%0.1fs)! More confident in performance (backlog >= %0.1fs).", TARGET_MOVE_TIME, t, self.slow)
