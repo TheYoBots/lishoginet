@@ -1,6 +1,16 @@
 Changelog for fishnet
 =====================
 
+v1.17.2
+-------
+
+* Reduce maximum move time from 20s to 6s. Clients that frequently hit this
+  limit should be stopped in favor of clients with better hardware.
+* Support future proof constants `--user-backlog short` and
+  `--system-backlog long` (to be used instead of hardcoded durations).
+* Fix some ignored command line flags during `python -m fishnet configure`
+  and on intial run.
+
 v1.17.1
 -------
 
