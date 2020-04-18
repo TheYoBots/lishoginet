@@ -198,14 +198,14 @@ GET http://lichess.org/fishnet/status
 {
   "analysis": {
     "user": { // User requested analysis. Respond as soon as possible.
-      "acquired": 156,
-      "queued": 5415,
-      "oldest": 123 // Longest time in queue, in seconds
+      "acquired": 93,
+      "queued": 1,
+      "oldest": 5 // Age in seconds of oldest job in queue
     },
     "system": { // System requested analysis. Low priority.
-      "acquired": 2,
-      "queued": 32415,
-      "oldest": 12345
+      "acquired": 128,
+      "queued": 14886,
+      "oldest": 7539
     }
   }
 }
