@@ -1212,13 +1212,13 @@ def load_conf(args):
 
     if not args.no_conf:
         if not args.conf and not os.path.isfile(DEFAULT_CONFIG):
-            return configure(args)
+            conf = configure(args)
+        else:
+            config_file = args.conf or DEFAULT_CONFIG
+            logging.debug("Using config file: %s", config_file)
 
-        config_file = args.conf or DEFAULT_CONFIG
-        logging.debug("Using config file: %s", config_file)
-
-        if not conf.read(config_file):
-            raise ConfigError("Could not read config file: %s" % config_file)
+            if not conf.read(config_file):
+                raise ConfigError("Could not read config file: %s" % config_file)
 
     if hasattr(args, "engine_dir") and args.engine_dir is not None:
         conf.set("Fishnet", "EngineDir", args.engine_dir)
@@ -1297,8 +1297,12 @@ def configure(args):
         os.remove(config_file)
 
     # Stockfish working directory
-    engine_dir = config_input("Engine working directory (default: %s): " % os.path.abspath("."),
-                              validate_engine_dir, out)
+    if args.engine_dir is None:
+        engine_dir = config_input("Engine working directory (default: %s): " % os.path.abspath("."),
+                                  validate_engine_dir, out)
+    else:
+        engine_dir = validate_engine_dir(args.engine_dir)
+        print("Engine working directory: %s" % engine_dir, file=out)
     conf.set("Fishnet", "EngineDir", engine_dir)
 
     # Stockfish command
@@ -1310,9 +1314,13 @@ def configure(args):
     print("You can build lichess.org custom Stockfish yourself and provide", file=out)
     print("the path or automatically download a precompiled binary.", file=out)
     print(file=out)
-    stockfish_command = config_input("Path or command (will download by default): ",
-                                     lambda v: validate_stockfish_command(v, conf),
-                                     out)
+    if args.stockfish_command is None:
+        stockfish_command = config_input("Path or command (will download by default): ",
+                                         lambda v: validate_stockfish_command(v, conf),
+                                         out)
+    else:
+        stockfish_command = validate_stockfish_command(args.stockfish_command, conf)
+        print("Path or command: %s" % stockfish_command, file=out)
     if not stockfish_command:
         conf.remove_option("Fishnet", "StockfishCommand")
     else:
@@ -1320,43 +1328,64 @@ def configure(args):
     print(file=out)
 
     # Cores
-    max_cores = multiprocessing.cpu_count()
-    default_cores = max(1, max_cores - 1)
-    cores = config_input("Number of cores to use for engine threads (default %d, max %d): " % (default_cores, max_cores),
-                         validate_cores, out)
+    if args.cores is None:
+        max_cores = multiprocessing.cpu_count()
+        default_cores = max(1, max_cores - 1)
+        cores = config_input("Number of cores to use for engine threads (default %d, max %d): " % (default_cores, max_cores),
+                             validate_cores, out)
+    else:
+        cores = validate_cores(args.cores)
+        print("Number of cores to use for engine threads: %d" % cores, file=out)
     conf.set("Fishnet", "Cores", str(cores))
 
     # Backlog
-    print(file=out)
-    print("You can choose to join only if a backlog is building up. Examples:", file=out)
-    print("* Rented server exlusively for fishnet: choose no", file=out)
-    print("* Running on laptop: choose yes", file=out)
-    if config_input("Would you prefer to keep your client idle? (default: no) ", parse_bool, out):
-        conf.set("Fishnet", "UserBacklog", "short")
-        conf.set("Fishnet", "SystemBacklog", "long")
+    if args.user_backlog is None and args.system_backlog is None:
+        print(file=out)
+        print("You can choose to join only if a backlog is building up. Examples:", file=out)
+        print("* Rented server exlusively for fishnet: choose no", file=out)
+        print("* Running on laptop: choose yes", file=out)
+        if config_input("Would you prefer to keep your client idle? (default: no) ", parse_bool, out):
+            conf.set("Fishnet", "UserBacklog", "short")
+            conf.set("Fishnet", "SystemBacklog", "long")
+        else:
+            conf.set("Fishnet", "UserBacklog", "0s")
+            conf.set("Fishnet", "SystemBacklog", "0s")
+        print(file=out)
     else:
-        conf.set("Fishnet", "UserBacklog", "0s")
-        conf.set("Fishnet", "SystemBacklog", "0s")
-    print(file=out)
+        print("Using custom backlog parameters.", file=out)
+        if args.user_backlog is not None:
+            parse_duration(args.user_backlog)
+            conf.set("Fishnet", "UserBacklog", args.user_backlog)
+        if args.system_backlog is not None:
+            parse_duration(args.system_backlog)
+            conf.set("Fishnet", "SystemBacklog", args.system_backlog)
 
     # Advanced options
-    endpoint = args.endpoint or DEFAULT_ENDPOINT
-    if config_input("Configure advanced options? (default: no) ", parse_bool, out):
-        endpoint = config_input("Fishnet API endpoint (default: %s): " % (endpoint, ), lambda inp: validate_endpoint(inp, endpoint), out)
-
+    if args.endpoint is None:
+        if config_input("Configure advanced options? (default: no) ", parse_bool, out):
+            endpoint = config_input("Fishnet API endpoint (default: %s): " % DEFAULT_ENDPOINT, validate_endpoint, out)
+        else:
+            endpoint = DEFAULT_ENDPOINT
+    else:
+        endpoint = validate_endpoint(args.endpoint)
+        print("Fishnet API endpoint: %s" % endpoint, file=out)
     conf.set("Fishnet", "Endpoint", endpoint)
 
     # Change key?
-    key = None
-    if conf.has_option("Fishnet", "Key"):
-        if not config_input("Change fishnet key? (default: no) ", parse_bool, out):
-            key = conf.get("Fishnet", "Key")
+    if args.key is None:
+        key = None
+        if conf.has_option("Fishnet", "Key"):
+            if not config_input("Change fishnet key? (default: no) ", parse_bool, out):
+                key = conf.get("Fishnet", "Key")
 
-    # Key
-    if key is None:
-        status = "https://lichess.org/get-fishnet" if is_production_endpoint(conf) else "probably not required"
-        key = config_input("Personal fishnet key (append ! to force, %s): " % status,
-                           lambda v: validate_key(v, conf, network=True), out)
+        # Key
+        if key is None:
+            status = "https://lichess.org/get-fishnet" if is_production_endpoint(conf) else "probably not required"
+            key = config_input("Personal fishnet key (append ! to force, %s): " % status,
+                               lambda v: validate_key(v, conf, network=True), out)
+    else:
+        key = validate_key(args.key, conf, network=True)
+        print("Personal fishnet key: %s" % (("*" * len(key) or "(none)", )), file=out)
     conf.set("Fishnet", "Key", key)
     logging.getLogger().addFilter(CensorLogFilter(key))
 
