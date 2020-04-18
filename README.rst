@@ -3,9 +3,11 @@ fishnet: distributed Stockfish analysis for lichess.org
 
 .. image:: https://badge.fury.io/py/fishnet.svg
     :target: https://pypi.python.org/pypi/fishnet
+    :alt: pypi package
 
 .. image:: https://travis-ci.org/niklasf/fishnet.svg?branch=master
     :target: https://travis-ci.org/niklasf/fishnet
+    :alt: build
 
 Installation
 ------------
@@ -45,6 +47,14 @@ Installation
 
        docker run mklemenz/fishnet --key MY_APIKEY --auto-update
 
+Video tutorial
+--------------
+
+.. image:: https://img.youtube.com/vi/iPRNluVn22w/0.jpg
+    :target: https://www.youtube.com/watch?v=iPRNluVn22w
+    :alt: Introduction video
+
+
 lichess.org custom Stockfish
 ----------------------------
 
@@ -56,7 +66,7 @@ You can build Stockfish yourself (for example with ``./build-stockfish.sh``)
 and provide the path using ``python -m fishnet --stockfish-command``. Otherwise
 a precompiled binary will be downloaded for you.
 
-Overview
+Protocol
 --------
 
 .. image:: https://raw.githubusercontent.com/niklasf/fishnet/master/doc/sequence-diagram.png
