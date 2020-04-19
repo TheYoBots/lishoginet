@@ -76,7 +76,7 @@ What are the requirements?
   Intel and AMD CPUs
 * Python 3.3+ or 2.7
 * Will max out the number of configured CPU cores
-* Uses 256 MiB RAM per engine process
+* Uses a default of 256 MiB RAM per engine process
 * A small amount of disk space
 * Low-bandwidth network communication with Lichess servers
   (only outgoing HTTP requests, so probably no firewall configuration
@@ -94,8 +94,9 @@ What happens if I stop my client?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Feel free to turn your client on and off at any time. By default, the client
-will try to finish any jobs it has alread started. On immediate shutdown,
-the client tries to tell Lichess to reassign the jobs. If even that fails,
+will try to finish any jobs it has already started. On immediate shutdown,
+the client tries to inform Lichess that jobs should be reassigned.
+If even that fails,
 Lichess will reassign the jobs after a timeout.
 
 Will fishnet use my GPU?
@@ -109,7 +110,7 @@ Is fishnet secure?
 
 To the best of our knowledge. All network communication uses modern TLS.
 However you implicitly trust the authors, PyPI infrastructure when running with
-`--auto-update`, the CI infrastructure when using precompiled Stockfish
+``--auto-update``, the CI infrastructure when using precompiled Stockfish
 binaries, and Lichess to not exploit potential vulnerabilities in Stockfish's
 UCI implementation. You can mitigate all of these by running fishnet as an
 unprivileged user.
@@ -117,13 +118,13 @@ unprivileged user.
 Is there a Docker image?
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Yes, see installation instructions above.
+Yes, see the installation instructions above.
 
 Can I autoscale fishnet in the cloud?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 There is currently no ready-made solution, but
-[an API for monitoring the job queue status](https://github.com/niklasf/fishnet/blob/master/doc/protocol.md#status)
+`an API for monitoring the job queue status <https://github.com/niklasf/fishnet/blob/master/doc/protocol.md#status>`_
 is provided.
 
 Protocol
