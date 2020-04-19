@@ -115,6 +115,12 @@ binaries, and Lichess to not exploit potential vulnerabilities in Stockfish's
 UCI implementation. You can mitigate all of these by running fishnet as an
 unprivileged user.
 
+Is there a leaderboard of contributors?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+No, sorry, not publically. It would incentivize gaming the metrics.
+
+
 Is there a Docker image?
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -137,5 +143,5 @@ See `protocol.md <https://github.com/niklasf/fishnet/blob/master/doc/protocol.md
 License
 -------
 
-fishnet is licensed under the GPLv3+ license. See LICENSE.txt for the full
+fishnet is licensed under the GPLv3+. See LICENSE.txt for the full
 license text.
