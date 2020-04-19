@@ -197,12 +197,12 @@ GET http://lichess.org/fishnet/status
 
 {
   "analysis": {
-    "user": { // User requested analysis. Respond as soon as possible.
-      "acquired": 93,
-      "queued": 1,
+    "user": { // User requested analysis (respond as soon as possible)
+      "acquired": 93, // Number of jobs that are currently assigned to clients
+      "queued": 1, // Number of jobs waiting to be assigned
       "oldest": 5 // Age in seconds of oldest job in queue
     },
-    "system": { // System requested analysis. Low priority.
+    "system": { // System requested analysis (low priority)
       "acquired": 128,
       "queued": 14886,
       "oldest": 7539
@@ -211,7 +211,8 @@ GET http://lichess.org/fishnet/status
 }
 ```
 
-Or queue monitoring is not supported (for example lila-fishnet):
+Or queue monitoring is not supported
+(for example internal [lila-fishnet](https://github.com/ornicar/lila-fishnet)):
 
 ```
 404 Not found
