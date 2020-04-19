@@ -54,17 +54,64 @@ Video tutorial
     :target: https://www.youtube.com/watch?v=iPRNluVn22w
     :alt: Introduction video
 
+FAQ
+---
 
-lichess.org custom Stockfish
-----------------------------
+### Which engine does fishnet use?
 
 fishnet is using
-`lichess.org custom Stockfish <https://github.com/niklasf/Stockfish/tree/fishnet>`__
+`a fork of Stockfish <https://github.com/niklasf/Stockfish/tree/fishnet>`__
+(hence the name) with multi-variant support
 by `@ddugovic, @ianfab et al <https://github.com/ddugovic/Stockfish>`_.
 
 You can build Stockfish yourself (for example with ``./build-stockfish.sh``)
 and provide the path using ``python -m fishnet --stockfish-command``. Otherwise
 a precompiled binary will be downloaded for you.
+
+### What resources does fishnet require?
+
+fishnet will max out however many CPUs you give it and uses 256 MiB of RAM
+for each engine process. Other than that, it uses a small amount of disk space
+and will do some low-bandwidth communication with Lichess servers
+(only outgoing HTTP requests, so probably no firewall configuration required).
+
+### Is my CPU fast enough?
+
+Almost all processor will be able to meet the requirement of 4 meganodes in
+6 seconds. Clients on the faster end will automatically be assigned
+analysis jobs that have humans waiting for the result (the user queue, as
+opposed to the system queue for slower clients).
+
+### What happens if I stop my client?
+
+Feel free to turn your client on and off at any time. By default, the client
+will try to finish any jobs it has alread started. On immediate shutdown,
+the client tries to tell Lichess to reassign the jobs. If even that fails,
+Lichess will reassign the jobs after a timeout.
+
+### Will fishnet use my GPU?
+
+No, Stockfish is a classical alpha-beta engine. (Supporting Lc0 analysis is
+a future prospect.)
+
+### Is fishnet secure?
+
+To the best of our knowledge. All network communication uses modern TLS.
+However you implicitly trust the authors, PyPI infrastructure when running with
+`--auto-update`, the CI infrastructure when using precompiled Stockfish
+binaries, and Lichess to not exploit potential vulnerabilities in Stockfish's
+UCI implementation. You can mitigate all of these by running fishnet as an
+unprivileged user.
+
+### Is there a Docker image?
+
+Yes, see installation instructions above.
+
+### Can I autoscale fishnet in the cloud?
+
+There is currently no ready-made solution, but
+[an API for monitoring the job queue status](https://github.com/niklasf/fishnet/blob/master/doc/protocol.md#status)
+is provided.
 
 Protocol
 --------
