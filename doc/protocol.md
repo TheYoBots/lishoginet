@@ -24,8 +24,10 @@ POST http://lichess.org/fishnet/acquire
 }
 ```
 
+Response with work:
+
 ```javascript
-200 OK
+202 OK
 
 {
   "work": {
@@ -45,6 +47,12 @@ POST http://lichess.org/fishnet/acquire
   "nodes": 3500000, // optional limit
   "skipPositions": [1, 4, 5] // 0 is the first position
 }
+```
+
+Response with no work found:
+
+```
+204 No Content
 ```
 
 Client runs Stockfish and sends the analysis to server.
