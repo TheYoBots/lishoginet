@@ -1803,29 +1803,49 @@ def cmd_configure(args):
 def cmd_systemd(args):
     conf = load_conf(args)
 
-    template = textwrap.dedent("""\
-        [Unit]
-        Description=Fishnet instance
-        After=network-online.target
-        Wants=network-online.target
+    if args.command == "systemd-user":
+        template = textwrap.dedent("""\
+            [Unit]
+            Description=Fishnet client
+            After=network-online.target
+            Wants=network-online.target
 
-        [Service]
-        ExecStart={start}
-        WorkingDirectory={cwd}
-        ReadWriteDirectories={cwd}
-        User={user}
-        Group={group}
-        Nice=5
-        CapabilityBoundingSet=
-        PrivateTmp=true
-        PrivateDevices=true
-        DevicePolicy=closed
-        ProtectSystem={protect_system}
-        NoNewPrivileges=true
-        Restart=always
+            [Service]
+            ExecStart={start}
+            WorkingDirectory={cwd}
+            ReadWriteDirectories={cwd}
+            Nice=5
+            PrivateTmp=true
+            DevicePolicy=closed
+            ProtectSystem={protect_system}
+            Restart=always
 
-        [Install]
-        WantedBy=multi-user.target""")
+            [Install]
+            WantedBy=default.target""")
+    else:
+        template = textwrap.dedent("""\
+            [Unit]
+            Description=Fishnet client
+            After=network-online.target
+            Wants=network-online.target
+
+            [Service]
+            ExecStart={start}
+            WorkingDirectory={cwd}
+            ReadWriteDirectories={cwd}
+            User={user}
+            Group={group}
+            Nice=5
+            CapabilityBoundingSet=
+            PrivateTmp=true
+            PrivateDevices=true
+            DevicePolicy=closed
+            ProtectSystem={protect_system}
+            NoNewPrivileges=true
+            Restart=always
+
+            [Install]
+            WantedBy=multi-user.target""")
 
     # Prepare command line arguments
     builder = [shell_quote(sys.executable)]
@@ -1904,11 +1924,18 @@ def cmd_systemd(args):
 
     if sys.stdout.isatty():
         print("\n# Example usage:", file=sys.stderr)
-        print("# python -m fishnet systemd | sudo tee /etc/systemd/system/fishnet.service", file=sys.stderr)
-        print("# sudo systemctl enable fishnet.service", file=sys.stderr)
-        print("# sudo systemctl start fishnet.service", file=sys.stderr)
-        print("#", file=sys.stderr)
-        print("# Live view of the log: sudo journalctl --follow -u fishnet", file=sys.stderr)
+        if args.command == "systemd-user":
+            print("# python -m fishnet systemd-user | tee ~/.config/systemd/user/fishnet.service", file=sys.stderr)
+            print("# systemctl enable --user fishnet.service", file=sys.stderr)
+            print("# systemctl start --user fishnet.service", file=sys.stderr)
+            print("#", file=sys.stderr)
+            print("# Live view of log: journalctl --follow --user-unit fishnet", file=sys.stderr)
+        else:
+            print("# python -m fishnet systemd | sudo tee /etc/systemd/system/fishnet.service", file=sys.stderr)
+            print("# sudo systemctl enable fishnet.service", file=sys.stderr)
+            print("# sudo systemctl start fishnet.service", file=sys.stderr)
+            print("#", file=sys.stderr)
+            print("# Live view of the log: sudo journalctl --follow -u fishnet", file=sys.stderr)
 
 
 @contextlib.contextmanager
@@ -2084,6 +2111,7 @@ def main(argv):
         ("run", cmd_run),
         ("configure", cmd_configure),
         ("systemd", cmd_systemd),
+        ("systemd-user", cmd_systemd),
         ("cpuid", cmd_cpuid),
     ])
 
@@ -2099,10 +2127,10 @@ def main(argv):
 
     # Setup logging
     setup_logging(args.verbose,
-                  sys.stderr if args.command == "systemd" else sys.stdout)
+                  sys.stderr if args.command in ["systemd", "systemd-user"] else sys.stdout)
 
     # Show intro
-    if args.command not in ["systemd", "cpuid"]:
+    if args.command not in ["systemd", "systemd-user", "cpuid"]:
         print(intro())
         sys.stdout.flush()
 
