@@ -1812,6 +1812,7 @@ def cmd_systemd(args):
 
             [Service]
             ExecStart={start}
+            KillMode=mixed
             WorkingDirectory={cwd}
             ReadWriteDirectories={cwd}
             Nice=5
@@ -1831,6 +1832,7 @@ def cmd_systemd(args):
 
             [Service]
             ExecStart={start}
+            KillMode=mixed
             WorkingDirectory={cwd}
             ReadWriteDirectories={cwd}
             User={user}
