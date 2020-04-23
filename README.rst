@@ -76,7 +76,8 @@ What are the requirements?
   Intel and AMD CPUs
 * Python 3.3+ or 2.7
 * Will max out the number of configured CPU cores
-* Uses a default of 256 MiB RAM per engine process
+* Uses a default of 256 MiB RAM per engine process, spawns one process for
+  each group of ~3 cores
 * A small amount of disk space
 * Low-bandwidth network communication with Lichess servers
   (only outgoing HTTP requests, so probably no firewall configuration
@@ -85,7 +86,7 @@ What are the requirements?
 Is my CPU fast enough?
 ^^^^^^^^^^^^^^^^^^^^^^
 
-Almost all processor will be able to meet the requirement of 4 meganodes in
+Almost all processors will be able to meet the requirement of 4 meganodes in
 6 seconds. Clients on the faster end will automatically be assigned
 analysis jobs that have humans waiting for the result (the user queue, as
 opposed to the system queue for slower clients).
