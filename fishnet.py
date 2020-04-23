@@ -617,7 +617,8 @@ class Worker(threading.Thread):
 
     def set_name(self, name):
         self.name = name
-        self.progress_reporter.name = "%s (P)" % (name, )
+        if self.progress_reporter:
+            self.progress_reporter.name = "%s (P)" % (name, )
 
     def stop(self):
         with self.status_lock:
@@ -633,6 +634,12 @@ class Worker(threading.Thread):
     def is_alive(self):
         with self.status_lock:
             return self.alive
+
+    def report_and_fetch(self, path, result, params):
+        return self.http.post(get_endpoint(self.conf, path),
+                              params=params,
+                              json=result,
+                              timeout=HTTP_TIMEOUT)
 
     def run(self):
         try:
@@ -678,14 +685,12 @@ class Worker(threading.Thread):
             if slow:
                 params["slow"] = "true"
 
-            # Report result and fetch next job
-            if path != "acquire" or "stop" not in params:
-                response = self.http.post(get_endpoint(self.conf, path),
-                                          params=params,
-                                          json=request,
-                                          timeout=HTTP_TIMEOUT)
-            else:
+            # Report result and fetch next job unless stopping and no results to report
+            if "stop" in params and path == "acquire":
                 response = None
+            else:
+                response = self.report_and_fetch(path, request, params)
+
         except requests.RequestException as err:
             self.job = None
             t = next(self.backoff)
@@ -975,6 +980,79 @@ class Worker(threading.Thread):
             logging.info("%s done (nothing to do)", self.job_name(job))
 
         return result
+
+
+class BenchmarkWorker(Worker):
+    def __init__(self, conf, threads, memory):
+        super(BenchmarkWorker, self).__init__(
+            conf, threads, memory, user_backlog=0, system_backlog=0, progress_reporter=None)
+
+        # Make sure BenchmarkWorker doesn't make http requests
+        self.http = None
+
+        self.running = False
+        self.time_running = 0.0
+
+    def abort_job(self):
+        self.job = None
+        return
+
+    def backlog_wait_time(self):
+        return 0, False
+
+    def analysis(self, job):
+        # Add timing for benchmarking
+        self.running = True
+        start = time.time()
+        super(BenchmarkWorker, self).analysis(job)
+        end = time.time()
+        self.running = False
+        self.time_running += end - start
+
+    def report_and_fetch(self, path, result, params):
+        # Fake response from a small set of random positions
+        game_id, moves = random.choice([
+            (
+                "RzXDxLUD",
+                "d2d4 g8f6 c2c4 e7e6 b1c3 d7d5 c4d5 e6d5 c1g5 c7c6 e2e3 f8e7 f1d3 e8g8 g1e2 c8d7 "
+                "e1g1 h7h6 g5h4 d7e6 f2f3 b8d7 g1h1 f8e8 d1d2 f6e4 f3e4 e7h4 e4e5 h4g5 e2f4 d7f8 "
+                "d2f2 d8e7 a1e1 f7f6 h2h4 g5f4 e3f4 f6f5 g2g4 e7f7 f1g1 g8h8 c3d1 f8g6 d1e3 g6e7 "
+                "e1f1 e8f8 f2h2 c6c5 h4h5 c5d4 e3c2 f5g4 f4f5 e6f5 c2d4 f5d3 f1f7 d3e4 f7f3 g4f3 "
+                "h2f2 f8f4 h1h2 a8f8 d4e6 f4f5 e6f8 f5h5 h2g3 e7f5 g3f4 g7g5 f4g4 h5h4 f2h4 f5h4 "
+                "e5e6 h8g7 e6e7 g7f7 f8d7 f7e7 d7e5 h4f5 e5f3 f5e3 g4g3 e3c4 g3f2 e7d6 f3d4 h6h5 "
+                "d4e2 h5h4 g1g5 d5d4 g5h5 d4d3 h5h6 d6e5 e2c3 e5d4 h6h5 e4f5 h5h4 f5e4 h4e4 d4c5 "
+                "e4e5 c5b4 e5e4 b4a5 e4c4 b7b6 c4a4",
+            ), (
+                "KU8R1KDQ",
+                "e2e4 e7e5 g1f3 b8c6 f1c4 f8c5 c2c3 g8f6 d2d4 e5d4 c3d4 c5b4 b1d2 f6e4 e1g1 d7d5 "
+                "d2e4 d5c4 d4d5 c6e7 d1a4 c7c6 a4b4 e7d5 e4d6 e8d7 b4a3 d8e7 f3e5 d7c7 e5f7 h8f8 "
+                "c1g5 e7d7 d6b5 c6b5 a3f8 d7e6 f8d8 c7c6 f7d6 e6d6 d8e8 d6d7 e8g8 d7f5 g5h4 d5c7 "
+                "h4g3 c8e6 g8g7 c7d5 f1e1 a8g8 g7h6 g8e8 e1e5 f5g6 h6d2 e8d8 a1e1 e6f7 d2a5 d8d7 "
+                "a5a7 g6c2 a7b8 c2b2 e5d5 c6d5 h2h3 c4c3 e1e5 d5d4 b8a7 d4d3 e5e3 d3c2 g1h2 c2b1 "
+                "e3e1 b1c2 e1e2 d7d2 a7e3 f7g6 e2e1 b2a2 g3e5 a2c4 e5c3 c4c3 e1c1 c2c1 e3c3 d2c2 "
+                "c3a1 c1d2 h2g3 d2d3 g3h2 c2c3 a1a3 d3d4 a3a5 b5b4 a5a6 b7a6 h3h4 b4b3 g2g3 b3b2",
+            ),
+        ])
+
+        encoded = json.dumps(
+            {
+                "work": {
+                    "type": "analysis",
+                    "id": "BENCHMARK"
+                },
+                "nodes": 4000000,
+                "skipPositions": [0,1,2,3,4,5,6,],
+                "game_id": game_id,
+                "position": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                "variant": "standard",
+                "moves": moves,
+            }
+        )
+
+        response = requests.models.Response()
+        response.status_code = 202
+        response._content = encoded.encode()
+        return response
 
 
 def detect_cpu_capabilities():
@@ -1606,13 +1684,13 @@ def get_engine_dir(conf):
 
 def get_stockfish_command(conf, update=True):
     stockfish_command = validate_stockfish_command(conf_get(conf, "StockfishCommand"), conf)
-    if not stockfish_command:
-        filename = stockfish_filename()
-        if update:
-            filename = update_stockfish(conf, filename)
-        return validate_stockfish_command(os.path.join(".", filename), conf)
-    else:
+    if stockfish_command:
         return stockfish_command
+
+    filename = stockfish_filename()
+    if update:
+        filename = update_stockfish(conf, filename)
+    return validate_stockfish_command(os.path.join(".", filename), conf)
 
 
 def get_endpoint(conf, sub=""):
@@ -1656,22 +1734,19 @@ def update_available():
                      __version__, latest_version)
         return True
 
+def display_config(args, conf, update=True):
+    '''
+    Display args and conf settings
 
-def cmd_run(args):
-    conf = load_conf(args)
-
-    if args.auto_update:
-        print()
-        print("### Updating ...")
-        print()
-        update_self()
+    This potentially updates StockfishCommand as a side-affect of how getting that command works.
+    '''
 
     stockfish_command = validate_stockfish_command(conf_get(conf, "StockfishCommand"), conf)
     if not stockfish_command:
         print()
         print("### Updating Stockfish ...")
         print()
-        stockfish_command = get_stockfish_command(conf)
+        stockfish_command = get_stockfish_command(conf, update=update)
 
     print()
     print("### Checking configuration ...")
@@ -1713,6 +1788,101 @@ def cmd_run(args):
     if args.ignored_threads:
         print("Ignored deprecated option --threads. Did you mean --cores?")
         print()
+
+    return cores, threads, instances, memory, user_backlog, system_backlog
+
+
+def cmd_benchmark(args):
+    conf = load_conf(args)
+    cores, threads, instances, memory, _, _ = display_config(args, conf)
+
+    buckets = [0] * instances
+    for i in range(0, cores):
+        buckets[i % instances] += 1
+
+    instance_memory = memory // instances
+    workers = [BenchmarkWorker(conf, bucket, instance_memory) for bucket in buckets]
+
+    logging.info("Starting %d workers" % len(workers))
+
+    # Start all threads
+    for i, worker in enumerate(workers):
+        worker.set_name("><> %d" % (i + 1))
+        worker.setDaemon(True)
+        worker.start()
+
+    # Note: Waiting with timeout on worker.running would be nicer.
+    time.sleep(3)
+    for worker in workers:
+        if not worker.running:
+            logging.warning("Worker %s never started", worker.name)
+    logging.info("All workers started")
+
+    # Let SIGTERM and SIGINT gracefully terminate the program
+    handler = SignalHandler()
+
+    finished = False
+    try:
+        # Stop workers after job finishes
+        for worker in workers:
+            worker.stop_soon()
+
+        # Wait for jobs to finish
+        for worker in workers:
+            logging.info("Waiting on worker %s" % worker.name)
+            worker.finished.wait()
+            if worker.fatal_error:
+                raise worker.fatal_error
+
+        # Note: Would be nice to add a better NPS stat.
+        # Adding a .processing_time stat to worker would help.
+
+        # Log stats
+        logging.info("[fishnet v%s] Analyzed %d positions, crunched %d million nodes",
+                     __version__,
+                     sum(worker.positions for worker in workers),
+                     int(sum(worker.nodes for worker in workers) / 1000 / 1000))
+        for worker in workers:
+            if worker.nodes and worker.time_running:
+                logging.info("[Worker %s] %d knodes / %.1f seconds = %.0f knps",
+                    worker.name,
+                    int(worker.nodes / 1000),
+                    worker.time_running,
+                    worker.nodes / 1000.0 / worker.time_running)
+
+        # Finished Benchmark
+        finished = True
+
+    except (Shutdown, ShutdownSoon):
+        logging.info("\n\n### Stopping benchmark early!")
+    finally:
+        logging.info("Benchmark cleanup!")
+
+        # Stop workers
+        for worker in workers:
+            worker.stop()
+
+        # Wait
+        for worker in workers:
+            worker.finished.wait()
+
+    # Print final stats
+    if finished:
+        logging.info("Benchmark finished!")
+
+    return 0
+
+def cmd_run(args):
+    conf = load_conf(args)
+
+    if args.auto_update:
+        print()
+        print("### Updating ...")
+        print()
+        update_self()
+
+    cores, threads, instances, memory, user_backlog, system_backlog = \
+        display_config(args, conf)
 
     print("### Starting workers (press Ctrl + C to stop) ...")
     print()
@@ -2083,6 +2253,7 @@ def main(argv):
     commands = collections.OrderedDict([
         ("run", cmd_run),
         ("configure", cmd_configure),
+        ("benchmark", cmd_benchmark),
         ("systemd", cmd_systemd),
         ("cpuid", cmd_cpuid),
     ])
