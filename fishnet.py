@@ -990,7 +990,7 @@ class BenchmarkWorker(Worker):
         # Make sure BenchmarkWorker doesn't make http requests
         self.http = None
 
-        self.running = False
+        self.started_analysis = threading.Event()
         self.time_running = 0.0
 
     def abort_job(self):
@@ -1001,12 +1001,12 @@ class BenchmarkWorker(Worker):
         return 0, False
 
     def analysis(self, job):
+        self.started_analysis.set()
+
         # Add timing for benchmarking
-        self.running = True
         start = time.time()
         super(BenchmarkWorker, self).analysis(job)
         end = time.time()
-        self.running = False
         self.time_running += end - start
 
     def report_and_fetch(self, path, result, params):
@@ -1734,19 +1734,22 @@ def update_available():
                      __version__, latest_version)
         return True
 
-def display_config(args, conf, update=True):
-    '''
-    Display args and conf settings
 
-    This potentially updates StockfishCommand as a side-affect of how getting that command works.
-    '''
-
+def update_config(conf):
+    '''Update conf by checking for newer stockfish release'''
     stockfish_command = validate_stockfish_command(conf_get(conf, "StockfishCommand"), conf)
     if not stockfish_command:
         print()
         print("### Updating Stockfish ...")
         print()
-        stockfish_command = get_stockfish_command(conf, update=update)
+        stockfish_command = get_stockfish_command(conf)
+
+
+def display_config(args, conf):
+    '''Display args and conf settings'''
+
+    # Don't call validate here as stockfish should be validated from update_config.
+    stockfish_command = conf_get(conf, "StockfishCommand")
 
     print()
     print("### Checking configuration ...")
@@ -1794,6 +1797,7 @@ def display_config(args, conf, update=True):
 
 def cmd_benchmark(args):
     conf = load_conf(args)
+    update_config(conf)
     cores, threads, instances, memory, _, _ = display_config(args, conf)
 
     buckets = [0] * instances
@@ -1811,31 +1815,26 @@ def cmd_benchmark(args):
         worker.setDaemon(True)
         worker.start()
 
-    # Note: Waiting with timeout on worker.running would be nicer.
-    time.sleep(3)
     for worker in workers:
-        if not worker.running:
+        if not worker.started_analysis.wait(1):
             logging.warning("Worker %s never started", worker.name)
-    logging.info("All workers started")
 
-    # Let SIGTERM and SIGINT gracefully terminate the program
-    handler = SignalHandler()
+    logging.info("All workers started")
 
     finished = False
     try:
+        # Let SIGTERM and SIGINT gracefully terminate the program
+        handler = SignalHandler()
+
         # Stop workers after job finishes
         for worker in workers:
             worker.stop_soon()
 
         # Wait for jobs to finish
         for worker in workers:
-            logging.info("Waiting on worker %s" % worker.name)
-            worker.finished.wait()
-            if worker.fatal_error:
-                raise worker.fatal_error
-
-        # Note: Would be nice to add a better NPS stat.
-        # Adding a .processing_time stat to worker would help.
+            logging.info("Waiting on worker %s to finish" % worker.name)
+            if not worker.finished.wait(4 * 100):
+                logging.warning("Timed out waiting for worker %s to finish", worker.name)
 
         # Log stats
         logging.info("[fishnet v%s] Analyzed %d positions, crunched %d million nodes",
@@ -1843,6 +1842,8 @@ def cmd_benchmark(args):
                      sum(worker.positions for worker in workers),
                      int(sum(worker.nodes for worker in workers) / 1000 / 1000))
         for worker in workers:
+            if worker.fatal_error:
+                raise worker.fatal_error
             if worker.nodes and worker.time_running:
                 logging.info("[Worker %s] %d knodes / %.1f seconds = %.0f knps",
                     worker.name,
@@ -1856,6 +1857,8 @@ def cmd_benchmark(args):
     except (Shutdown, ShutdownSoon):
         logging.info("\n\n### Stopping benchmark early!")
     finally:
+        handler.ignore = True
+
         logging.info("Benchmark cleanup!")
 
         # Stop workers
@@ -1881,6 +1884,7 @@ def cmd_run(args):
         print()
         update_self()
 
+    update_config(conf)
     cores, threads, instances, memory, user_backlog, system_backlog = \
         display_config(args, conf)
 
