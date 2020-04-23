@@ -210,7 +210,9 @@ GET http://lichess.org/fishnet/status
       "queued": 1, // Number of jobs waiting to be assigned
       "oldest": 5 // Age in seconds of oldest job in queue
     },
-    "system": { // System requested analysis (low priority)
+    "system": { // System requested analysis (for example spot check for cheat
+                // screening, low priority, queue may build up during peak time
+                // and should be cleared once a day)
       "acquired": 128,
       "queued": 14886,
       "oldest": 7539
