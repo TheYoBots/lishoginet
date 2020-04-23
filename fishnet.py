@@ -1938,6 +1938,8 @@ def cmd_systemd(args):
             print("# sudo systemctl start fishnet.service", file=sys.stderr)
             print("#", file=sys.stderr)
             print("# Live view of the log: sudo journalctl --follow -u fishnet", file=sys.stderr)
+            print("#", file=sys.stderr)
+            print("# Need a user unit? python -m fishnet systemd-user", file=sys.stderr)
 
 
 @contextlib.contextmanager
