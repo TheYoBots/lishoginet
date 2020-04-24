@@ -347,7 +347,12 @@ def kill_process(p):
         # Unix
         os.killpg(p.pid, signal.SIGKILL)
 
-    p.communicate()
+    # Try to avoid zombie by cleaning up any leftover stdout
+    try:
+        p.communicate()
+    except IOError:
+        # Can happen from duplicate communication to p
+        pass
 
 
 def send(p, line):
