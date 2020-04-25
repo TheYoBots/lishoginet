@@ -347,12 +347,13 @@ def kill_process(p):
         # Unix
         os.killpg(p.pid, signal.SIGKILL)
 
-    # Try to avoid zombie by cleaning up any leftover stdout
     try:
+        # Clean up all pipes
         p.communicate()
     except IOError:
-        # Can happen from duplicate communication to p
-        pass
+        # Python 2: Ignore "close() called during concurrent operation on the
+        # same file object".
+        logging.warning("Ignoring failure to clean up pipes")
 
 
 def send(p, line):
