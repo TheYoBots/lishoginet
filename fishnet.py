@@ -460,8 +460,9 @@ def go(p, position, moves, movetime=None, clock=None, depth=None, nodes=None):
 
     send(p, " ".join(builder))
 
-    info = {}
-    info["bestmove"] = None
+    analysis = {}
+    analysis["bestmove"] = None
+    analysis["depths"] = []
 
     while True:
         command, arg = recv_uci(p)
@@ -469,10 +470,11 @@ def go(p, position, moves, movetime=None, clock=None, depth=None, nodes=None):
         if command == "bestmove":
             bestmove = arg.split()[0]
             if bestmove and bestmove != "(none)":
-                info["bestmove"] = bestmove
-            return info
+                analysis["bestmove"] = bestmove
+            return analysis
         elif command == "info":
             arg = arg or ""
+            info = {}
 
             # Parse all other parameters
             score_kind, score_value, lowerbound, upperbound = None, None, False, False
@@ -488,14 +490,11 @@ def go(p, position, moves, movetime=None, clock=None, depth=None, nodes=None):
                     current_parameter = "score"
                 elif token == "pv":
                     current_parameter = "pv"
-                    if info.get("multipv", 1) == 1:
-                        info.pop("pv", None)
                 elif token in ["depth", "seldepth", "time", "nodes", "multipv",
                                "currmove", "currmovenumber",
                                "hashfull", "nps", "tbhits", "cpuload",
                                "refutation", "currline", "string"]:
                     current_parameter = token
-                    info.pop(current_parameter, None)
                 elif current_parameter in ["depth", "seldepth", "time",
                                            "nodes", "currmovenumber",
                                            "hashfull", "nps", "tbhits",
@@ -513,7 +512,7 @@ def go(p, position, moves, movetime=None, clock=None, depth=None, nodes=None):
                         upperbound = True
                     else:
                         score_value = int(token)
-                elif current_parameter != "pv" or info.get("multipv", 1) == 1:
+                elif current_parameter != "pv" or info.get("multipv") is not None:
                     # Strings
                     if current_parameter in info:
                         info[current_parameter] += " " + token
@@ -527,6 +526,15 @@ def go(p, position, moves, movetime=None, clock=None, depth=None, nodes=None):
                     info["score"]["lowerbound"] = lowerbound
                 if upperbound:
                     info["score"]["upperbound"] = upperbound
+
+            # Stockfish seems to send us the moves in order (depth 1,2,3 and multipv 1,2,3)
+            # so until I talk to niklas I'm going to assum we can depend on this
+            if info.get('multipv') and info.get('depth'):
+                # Add this move to the info
+                if info['multipv'] == 1:
+                    analysis['depths'].append([])
+                analysis['depths'][info['depth']-1].append(info)
+
         else:
             logging.warning("Unexpected engine response to go: %s %s", command, arg)
 
@@ -927,10 +935,16 @@ class Worker(threading.Thread):
         set_variant_options(self.stockfish, variant)
         setoption(self.stockfish, "Skill Level", 20)
         setoption(self.stockfish, "UCI_AnalyseMode", True)
+        multipv = job.get("multipv")
+        if multipv:
+            setoption(self.stockfish, "MultiPV", multipv)
+        is_multipv = multipv and multipv > 1
+
         send(self.stockfish, "ucinewgame")
         isready(self.stockfish)
 
         nodes = job.get("nodes") or 3500000
+        depth = job.get("depth")
         skip = job.get("skipPositions", [])
 
         num_positions = 0
@@ -949,14 +963,17 @@ class Worker(threading.Thread):
                         variant, self.job_name(job, ply))
 
             part = go(self.stockfish, job["position"], moves[0:ply],
-                      nodes=nodes, movetime=int(MAX_MOVE_TIME * 1000))
+                      nodes=nodes, movetime=int(MAX_MOVE_TIME * 1000),
+                      depth=depth)
 
-            if part["score"].get("cp") and "time" in part and part["time"] < 100:
-                logging.warning("Very low time reported: %d ms.", part["time"])
+            # TODO: need to deal with this more elegantly
+            if not is_multipv:
+                if part["score"].get("cp") and "time" in part and part["time"] < 100:
+                    logging.warning("Very low time reported: %d ms.", part["time"])
 
-            if "nps" in part and part["nps"] >= 100000000:
-                logging.warning("Dropping exorbitant nps: %d", part["nps"])
-                del part["nps"]
+                if "nps" in part and part["nps"] >= 100000000:
+                    logging.warning("Dropping exorbitant nps: %d", part["nps"])
+                    del part["nps"]
 
             self.nodes += part.get("nodes", 0)
             self.positions += 1
