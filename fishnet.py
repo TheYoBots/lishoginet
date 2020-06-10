@@ -885,9 +885,9 @@ class Worker(threading.Thread):
 
         set_variant_options(self.stockfish, job.get("variant", "standard"))
         if lvl == 8:
-            setoption(self.stockfish, "UCI_LimitStrength", "false")
+            setoption(self.stockfish, "UCI_LimitStrength", False)
         else:
-            setoption(self.stockfish, "UCI_LimitStrength", "true")
+            setoption(self.stockfish, "UCI_LimitStrength", True)
             setoption(self.stockfish, "UCI_Elo", LVL_ELO[lvl - 1])
         setoption(self.stockfish, "UCI_AnalyseMode", False)
         send(self.stockfish, "ucinewgame")
@@ -924,7 +924,7 @@ class Worker(threading.Thread):
         start = last_progress_report = time.time()
 
         set_variant_options(self.stockfish, variant)
-        setoption(self.stockfish, "Skill Level", 20)
+        setoption(self.stockfish, "UCI_LimitStrength", False)
         setoption(self.stockfish, "UCI_AnalyseMode", True)
         send(self.stockfish, "ucinewgame")
         isready(self.stockfish)
