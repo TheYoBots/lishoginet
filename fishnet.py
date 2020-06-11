@@ -117,9 +117,8 @@ HTTP_TIMEOUT = 15.0
 STAT_INTERVAL = 60.0
 PROGRESS_REPORT_INTERVAL = 5.0
 CHECK_PYPI_CHANCE = 0.01
-LVL_SKILL = [0, 3, 6, 10, 14, 16, 18, 20]
+LVL_ELO = [800, 1000, 1250, 1500, 1750, 2000, 2300]
 LVL_MOVETIMES = [50, 100, 150, 200, 300, 400, 500, 1000]
-LVL_DEPTHS = [1, 1, 2, 3, 5, 8, 13, 22]
 
 
 def intro():
@@ -434,7 +433,7 @@ def setoption(p, name, value):
     send(p, "setoption name %s value %s" % (name, value))
 
 
-def go(p, position, moves, movetime=None, clock=None, depth=None, nodes=None):
+def go(p, position, moves, movetime=None, clock=None, nodes=None):
     send(p, "position fen %s moves %s" % (position, " ".join(moves)))
 
     builder = []
@@ -442,9 +441,6 @@ def go(p, position, moves, movetime=None, clock=None, depth=None, nodes=None):
     if movetime is not None:
         builder.append("movetime")
         builder.append(str(movetime))
-    if depth is not None:
-        builder.append("depth")
-        builder.append(str(depth))
     if nodes is not None:
         builder.append("nodes")
         builder.append(str(nodes))
@@ -888,7 +884,11 @@ class Worker(threading.Thread):
                       self.job_name(job), variant, lvl)
 
         set_variant_options(self.stockfish, job.get("variant", "standard"))
-        setoption(self.stockfish, "Skill Level", LVL_SKILL[lvl - 1])
+        if lvl == 8:
+            setoption(self.stockfish, "UCI_LimitStrength", False)
+        else:
+            setoption(self.stockfish, "UCI_LimitStrength", True)
+            setoption(self.stockfish, "UCI_Elo", LVL_ELO[lvl - 1])
         setoption(self.stockfish, "UCI_AnalyseMode", False)
         send(self.stockfish, "ucinewgame")
         isready(self.stockfish)
@@ -897,8 +897,7 @@ class Worker(threading.Thread):
 
         start = time.time()
         part = go(self.stockfish, job["position"], moves,
-                  movetime=movetime, clock=job["work"].get("clock"),
-                  depth=LVL_DEPTHS[lvl - 1])
+                  movetime=movetime, clock=job["work"].get("clock"))
         end = time.time()
 
         logging.log(PROGRESS, "Played move in %s (%s) with lvl %d: %0.3fs elapsed, depth %d",
@@ -925,7 +924,7 @@ class Worker(threading.Thread):
         start = last_progress_report = time.time()
 
         set_variant_options(self.stockfish, variant)
-        setoption(self.stockfish, "Skill Level", 20)
+        setoption(self.stockfish, "UCI_LimitStrength", False)
         setoption(self.stockfish, "UCI_AnalyseMode", True)
         send(self.stockfish, "ucinewgame")
         isready(self.stockfish)
