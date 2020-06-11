@@ -1,6 +1,18 @@
 Changelog for fishnet
 =====================
 
+v1.18.0
+-------
+
+* New command: Use `python -m fishnet systemd-user` to generate a systemd user
+  service file.
+* New command: Use `python -m fishnet benchmark` to try running the engine
+  before getting a fishnet key.
+* Fix process shutdown order with systemd.
+* Fix race condition during shutdown on Python 2.7.
+* Use `UCI_Elo` instead of `Skill Level` and expand the range significantly.
+  Low skill levels should now play much weaker.
+
 v1.17.2
 -------
 

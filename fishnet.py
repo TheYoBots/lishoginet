@@ -95,7 +95,7 @@ except NameError:
     DEAD_ENGINE_ERRORS = (EOFError, IOError)
 
 
-__version__ = "1.17.2"  # remember to update changelog
+__version__ = "1.18.0"  # remember to update changelog
 
 __author__ = "Niklas Fiekas"
 __email__ = "niklas.fiekas@backscattering.de"
