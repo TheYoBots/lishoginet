@@ -119,6 +119,7 @@ PROGRESS_REPORT_INTERVAL = 5.0
 CHECK_PYPI_CHANCE = 0.01
 LVL_ELO = [800, 1000, 1250, 1500, 1750, 2000, 2300]
 LVL_MOVETIMES = [50, 100, 150, 200, 300, 400, 500, 1000]
+LVL_DEPTHS = [5, 5, 5, 5, 5, 8, 13, 22]
 
 
 def intro():
@@ -433,7 +434,7 @@ def setoption(p, name, value):
     send(p, "setoption name %s value %s" % (name, value))
 
 
-def go(p, position, moves, movetime=None, clock=None, nodes=None):
+def go(p, position, moves, movetime=None, clock=None, depth=None, nodes=None):
     send(p, "position fen %s moves %s" % (position, " ".join(moves)))
 
     builder = []
@@ -444,6 +445,9 @@ def go(p, position, moves, movetime=None, clock=None, nodes=None):
     if nodes is not None:
         builder.append("nodes")
         builder.append(str(nodes))
+    if depth is not None:
+        builder.append("depth")
+        builder.append(str(depth))
     if clock is not None:
         builder.append("wtime")
         builder.append(str(clock["wtime"] * 10))
@@ -895,6 +899,7 @@ class Worker(threading.Thread):
 
         start = time.time()
         part = go(self.stockfish, job["position"], moves,
+                  depth=LVL_DEPTHS[lvl - 1],
                   movetime=movetime, clock=job["work"].get("clock"))
         end = time.time()
 
