@@ -117,7 +117,7 @@ HTTP_TIMEOUT = 15.0
 STAT_INTERVAL = 60.0
 PROGRESS_REPORT_INTERVAL = 5.0
 CHECK_PYPI_CHANCE = 0.01
-LVL_ELO = [800, 1100, 1400, 1700, 2000, 2300, 2700]
+LVL_ELO = [800, 1100, 1400, 1700, 2000, 2300, 2700, 3000]
 LVL_MOVETIMES = [50, 100, 150, 200, 300, 400, 500, 1000]
 LVL_DEPTHS = [5, 5, 5, 5, 5, 8, 13, 22]
 
@@ -889,8 +889,7 @@ class Worker(threading.Thread):
 
         set_variant_options(self.stockfish, job.get("variant", "standard"))
         setoption(self.stockfish, "UCI_LimitStrength", lvl < 8)
-        if lvl < 8:
-            setoption(self.stockfish, "UCI_Elo", LVL_ELO[lvl - 1])
+        setoption(self.stockfish, "UCI_Elo", LVL_ELO[lvl - 1])
         setoption(self.stockfish, "UCI_AnalyseMode", False)
         send(self.stockfish, "ucinewgame")
         isready(self.stockfish)
