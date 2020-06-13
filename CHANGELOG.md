@@ -1,6 +1,12 @@
 Changelog for fishnet
 =====================
 
+v1.18.1
+-------
+
+* Lichess-hosted instances: Make `UCI_Elo` gradient steeper. Reintroduce depth
+  limits to limit resource consumption of low levels.
+
 v1.18.0
 -------
 
@@ -10,8 +16,8 @@ v1.18.0
   before getting a fishnet key.
 * Fix process shutdown order with systemd.
 * Fix race condition during shutdown on Python 2.7.
-* Use `UCI_Elo` instead of `Skill Level` and expand the range significantly.
-  Low skill levels should now play much weaker.
+* Lichess-hosted instances: Use `UCI_Elo` instead of `Skill Level` and expand
+  the range significantly. Low skill levels should now play much weaker.
 
 v1.17.2
 -------
