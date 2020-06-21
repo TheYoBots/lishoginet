@@ -434,7 +434,7 @@ def setoption(p, name, value):
     send(p, "setoption name %s value %s" % (name, value))
 
 
-def go(p, position, moves, movetime=None, clock=None, depth=None, nodes=None):
+def go(p, position, moves, movetime=None, clock=None, depth=None, nodes=None, multipv=1):
     send(p, "position fen %s moves %s" % (position, " ".join(moves)))
 
     builder = []
@@ -471,6 +471,15 @@ def go(p, position, moves, movetime=None, clock=None, depth=None, nodes=None):
             bestmove = arg.split()[0]
             if bestmove and bestmove != "(none)":
                 analysis["bestmove"] = bestmove
+            if multipv == 1:
+                if analysis['depths']:
+                    deepest = analysis['depths'][-1]
+                    if deepest:
+                        # At each depth we have a list of PVs
+                        # if we are not asking for the multipv, then we should
+                        # only have one. So grab the deepest and set it as the
+                        # primary analysis for backwards compatibility
+                        analysis.update(analysis['depths'][-1][0])
             return analysis
         elif command == "info":
             arg = arg or ""
@@ -512,7 +521,7 @@ def go(p, position, moves, movetime=None, clock=None, depth=None, nodes=None):
                         upperbound = True
                     else:
                         score_value = int(token)
-                elif current_parameter != "pv" or info.get("multipv") is not None:
+                elif current_parameter != "pv" or info.get("depth") is not None:
                     # Strings
                     if current_parameter in info:
                         info[current_parameter] += " " + token
@@ -527,13 +536,15 @@ def go(p, position, moves, movetime=None, clock=None, depth=None, nodes=None):
                 if upperbound:
                     info["score"]["upperbound"] = upperbound
 
+            # we sometimes need to support a depth of 0, so we always have [0, multipv] depths
             # Stockfish seems to send us the moves in order (depth 1,2,3 and multipv 1,2,3)
             # so until I talk to niklas I'm going to assum we can depend on this
-            if info.get('multipv') and info.get('depth'):
+            depth = info.get('depth')
+            if depth is not None:
                 # Add this move to the info
-                if info['multipv'] == 1:
+                while len(analysis['depths']) < depth+1:
                     analysis['depths'].append([])
-                analysis['depths'][info['depth']-1].append(info)
+                analysis['depths'][info['depth']].append(info)
 
         else:
             logging.warning("Unexpected engine response to go: %s %s", command, arg)
@@ -935,10 +946,10 @@ class Worker(threading.Thread):
         set_variant_options(self.stockfish, variant)
         setoption(self.stockfish, "Skill Level", 20)
         setoption(self.stockfish, "UCI_AnalyseMode", True)
-        multipv = job.get("multipv")
-        if multipv:
+        multipv = job.get("multipv", 1)
+        if multipv > 1:
             setoption(self.stockfish, "MultiPV", multipv)
-        is_multipv = multipv and multipv > 1
+        is_multipv = multipv > 1
 
         send(self.stockfish, "ucinewgame")
         isready(self.stockfish)
@@ -964,7 +975,7 @@ class Worker(threading.Thread):
 
             part = go(self.stockfish, job["position"], moves[0:ply],
                       nodes=nodes, movetime=int(MAX_MOVE_TIME * 1000),
-                      depth=depth)
+                      depth=depth, multipv=multipv)
 
             # TODO: need to deal with this more elegantly
             if not is_multipv:
