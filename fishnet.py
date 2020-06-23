@@ -991,8 +991,22 @@ class Worker(threading.Thread):
             scores, nodes, times, pvs = recv_analysis(self.stockfish)
 
             if multipv is None:
-                # TODO: Implement BC
-                result["analysis"][ply] = part
+                depth = len(scores[0]) - 1
+                result["analysis"][ply] = {
+                    "depth": depth,
+                    "score": decode_score(scores[0][depth]),
+                }
+                try:
+                    result["analysis"][ply]["nodes"] = n = nodes[0][depth]
+                    result["analysis"][ply]["time"] = time = times[0][depth]
+                    if time > 200:
+                        result["analysis"][ply]["nps"] = n // time
+                except IndexError:
+                    pass
+                try:
+                    result["analysis"][ply]["pv"] = pvs[0][depth]
+                except IndexError:
+                    pass
             else:
                 result["analysis"]["time"][ply] = times
                 result["analysis"]["nodes"][ply] = nodes
