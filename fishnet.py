@@ -984,8 +984,9 @@ class Worker(threading.Thread):
                         variant, self.job_name(job, ply))
 
             go(self.stockfish, job["position"], moves[0:ply],
-               nodes=job.get("nodes") or 3500000, movetime=int(MAX_MOVE_TIME * 1000),
-               depth=depth, multipv=multipv)
+               nodes=job.get("nodes") or 3500000,
+               movetime=int(MAX_MOVE_TIME * 1000),
+               depth=depth)
             scores, nodes, times, pvs = recv_analysis(self.stockfish)
 
             if multipv is None:
@@ -996,9 +997,9 @@ class Worker(threading.Thread):
                 }
                 try:
                     result["analysis"][ply]["nodes"] = n = nodes[0][depth]
-                    result["analysis"][ply]["time"] = time = times[0][depth]
-                    if time > 200:
-                        result["analysis"][ply]["nps"] = n // time
+                    result["analysis"][ply]["time"] = t = times[0][depth]
+                    if t > 200:
+                        result["analysis"][ply]["nps"] = n // t
                 except IndexError:
                     pass
                 try:
