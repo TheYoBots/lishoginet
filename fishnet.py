@@ -944,13 +944,11 @@ class Worker(threading.Thread):
         moves = job["moves"].split(" ")
 
         result = self.make_request()
-        result["analysis"] = [None for _ in range(len(moves) + 1)]
         start = last_progress_report = time.time()
 
         nodes = job.get("nodes") or 3500000
         depth = job.get("depth")
         multipv = job.get("multipv")
-        is_multipv = multipv is not None and multipv > 1
         skip = job.get("skipPositions", [])
 
         set_variant_options(self.stockfish, variant)
@@ -961,14 +959,25 @@ class Worker(threading.Thread):
         send(self.stockfish, "ucinewgame")
         isready(self.stockfish)
 
+        if multipv is None:
+            result["analysis"] = [None for _ in range(len(moves) + 1)]
+        else:
+            result["analysis"] = {
+                "time": [[] for _ in range(len(moves) + 1)],
+                "nodes": [[] for _ in range(len(moves) + 1)],
+                "score": [[] for _ in range(len(moves) + 1)],
+                "pv": [[] for _ in range(len(moves) + 1)],
+            }
+
         num_positions = 0
 
         for ply in range(len(moves), -1, -1):
             if ply in skip:
-                result["analysis"][ply] = {"skipped": True}
+                if multipv is None:
+                    result["analysis"][ply] = {"skipped": True}
                 continue
 
-            if last_progress_report + PROGRESS_REPORT_INTERVAL < time.time():
+            if multipv is None and last_progress_report + PROGRESS_REPORT_INTERVAL < time.time():
                 if self.progress_reporter:
                     self.progress_reporter.send(job, result)
                 last_progress_report = time.time()
@@ -979,22 +988,23 @@ class Worker(threading.Thread):
             go(self.stockfish, job["position"], moves[0:ply],
                nodes=nodes, movetime=int(MAX_MOVE_TIME * 1000),
                depth=depth, multipv=multipv)
-            part = recv_analysis(self.stockfish)
+            scores, nodes, times, pvs = recv_analysis(self.stockfish)
 
-            # TODO: need to deal with this more elegantly
-            if not is_multipv:
-                if part["score"].get("cp") and "time" in part and part["time"] < 100:
-                    logging.warning("Very low time reported: %d ms.", part["time"])
+            if multipv is None:
+                # TODO: Implement BC
+                result["analysis"][ply] = part
+            else:
+                result["analysis"]["time"][ply] = times
+                result["analysis"]["nodes"][ply] = nodes
+                result["analysis"]["score"][ply] = scores
+                result["analysis"]["pv"][ply] = pvs
 
-                if "nps" in part and part["nps"] >= 100000000:
-                    logging.warning("Dropping exorbitant nps: %d", part["nps"])
-                    del part["nps"]
-
-            self.nodes += part.get("nodes", 0)
+            try:
+                self.nodes += nodes[0][-1]
+            except IndexError:
+                pass
             self.positions += 1
             num_positions += 1
-
-            result["analysis"][ply] = part
 
         end = time.time()
 
