@@ -924,13 +924,12 @@ class Worker(threading.Thread):
         bestmove = recv_bestmove(self.stockfish)
         end = time.time()
 
-        logging.log(PROGRESS, "Played move in %s (%s) with lvl %d: %0.3fs elapsed, depth %d",
+        logging.log(PROGRESS, "Played move in %s (%s) with lvl %d: %0.3fs elapsed",
                     self.job_name(job), variant,
-                    lvl, end - start, part.get("depth", 0))
+                    lvl, end - start)
 
         self.slow = 0.1  # move clients are trusted to be fast
 
-        self.nodes += part.get("nodes", 0)
         self.positions += 1
 
         result = self.make_request()
@@ -946,7 +945,6 @@ class Worker(threading.Thread):
         result = self.make_request()
         start = last_progress_report = time.time()
 
-        nodes = job.get("nodes") or 3500000
         depth = job.get("depth")
         multipv = job.get("multipv")
         skip = job.get("skipPositions", [])
@@ -986,7 +984,7 @@ class Worker(threading.Thread):
                         variant, self.job_name(job, ply))
 
             go(self.stockfish, job["position"], moves[0:ply],
-               nodes=nodes, movetime=int(MAX_MOVE_TIME * 1000),
+               nodes=job.get("nodes") or 3500000, movetime=int(MAX_MOVE_TIME * 1000),
                depth=depth, multipv=multipv)
             scores, nodes, times, pvs = recv_analysis(self.stockfish)
 
