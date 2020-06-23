@@ -510,7 +510,7 @@ def recv_analysis(p):
             return scores, nodes, times, pvs
         elif command == "info":
             depth = None
-            multipv = None
+            multipv = 1
 
             def set_table(arr, value):
                 while len(arr) < multipv:
@@ -540,7 +540,7 @@ def recv_analysis(p):
                         is_bound = True
                         tokens.pop(0)
 
-                    was_bound = len(bound) < multipv or len(bound[multipv - 1]) <= depth or bound[multipv - 1][depth]
+                    was_bound = depth is None or len(bound) < multipv or len(bound[multipv - 1]) <= depth or bound[multipv - 1][depth]
                     set_table(bound, is_bound)
 
                     if was_bound or not is_bound:
