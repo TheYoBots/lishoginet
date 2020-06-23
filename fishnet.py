@@ -943,20 +943,19 @@ class Worker(threading.Thread):
         result["analysis"] = [None for _ in range(len(moves) + 1)]
         start = last_progress_report = time.time()
 
+        nodes = job.get("nodes") or 3500000
+        depth = job.get("depth")
+        multipv = job.get("multipv")
+        is_multipv = multipv is not None and multipv > 1
+        skip = job.get("skipPositions", [])
+
         set_variant_options(self.stockfish, variant)
         setoption(self.stockfish, "Skill Level", 20)
         setoption(self.stockfish, "UCI_AnalyseMode", True)
-        multipv = job.get("multipv", 1)
-        if multipv > 1:
-            setoption(self.stockfish, "MultiPV", multipv)
-        is_multipv = multipv > 1
+        setoption(self.stockfish, "MultiPV", multipv or 1)
 
         send(self.stockfish, "ucinewgame")
         isready(self.stockfish)
-
-        nodes = job.get("nodes") or 3500000
-        depth = job.get("depth")
-        skip = job.get("skipPositions", [])
 
         num_positions = 0
 
