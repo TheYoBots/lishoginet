@@ -477,70 +477,64 @@ def recv_bestmove(p):
 
 
 def recv_analysis(p):
-    info = {}
-    info["bestmove"] = None
+    scores = []
+    nodes = []
+    times = []
+    pvs = []
+
+    bound = []
 
     while True:
         command, arg = recv_uci(p)
 
         if command == "bestmove":
-            bestmove = arg.split()[0]
-            if bestmove and bestmove != "(none)":
-                analysis["bestmove"] = bestmove
-            return info
+            return scores, nodes, times, pvs
         elif command == "info":
-            arg = arg or ""
+            depth = None
+            multipv = None
 
-            # Parse all other parameters
-            score_kind, score_value, lowerbound, upperbound = None, None, False, False
-            current_parameter = None
-            for token in arg.split(" "):
-                if current_parameter == "string":
-                    # Everything until the end of line is a string
-                    if "string" in info:
-                        info["string"] += " " + token
-                    else:
-                        info["string"] = token
-                elif token == "score":
-                    current_parameter = "score"
-                elif token == "pv":
-                    current_parameter = "pv"
-                elif token in ["depth", "seldepth", "time", "nodes", "multipv",
-                               "currmove", "currmovenumber",
-                               "hashfull", "nps", "tbhits", "cpuload",
-                               "refutation", "currline", "string"]:
-                    current_parameter = token
-                elif current_parameter in ["depth", "seldepth", "time",
-                                           "nodes", "currmovenumber",
-                                           "hashfull", "nps", "tbhits",
-                                           "cpuload", "multipv"]:
-                    # Integer parameters
-                    info[current_parameter] = int(token)
-                elif current_parameter == "score":
-                    # Score
-                    if token in ["cp", "mate"]:
-                        score_kind = token
-                        score_value = None
-                    elif token == "lowerbound":
-                        lowerbound = True
-                    elif token == "upperbound":
-                        upperbound = True
-                    else:
-                        score_value = int(token)
-                elif current_parameter != "pv" or info.get("depth") is not None:
-                    # Strings
-                    if current_parameter in info:
-                        info[current_parameter] += " " + token
-                    else:
-                        info[current_parameter] = token
+            def set_table(arr, value):
+                while len(arr) < multipv:
+                    arr.append([])
+                while len(arr[multipv - 1]) <= depth:
+                    arr[multipv - 1].append(None)
+                arr[multipv - 1][depth] = value
 
-            # Set score. Prefer scores that are not just a bound
-            if score_kind and score_value is not None and (not (lowerbound or upperbound) or "score" not in info or info["score"].get("lowerbound") or info["score"].get("upperbound")):
-                info["score"] = {score_kind: score_value}
-                if lowerbound:
-                    info["score"]["lowerbound"] = lowerbound
-                if upperbound:
-                    info["score"]["upperbound"] = upperbound
+            tokens = (arg or "").split(" ")
+            while tokens:
+                parameter = tokens.pop(0)
+
+                if parameter == "multipv":
+                    multipv = int(tokens.pop(0))
+                elif parameter == "depth":
+                    depth = int(tokens.pop(0))
+                elif parameter == "nodes":
+                    set_table(nodes, int(tokens.pop(0)))
+                elif parameter == "time":
+                    set_table(times, int(tokens.pop(0)))
+                elif parameter == "score":
+                    kind = tokens.pop(0)
+                    value = int(tokens.pop(0))
+
+                    if kind == "mate":
+                        if value > 0:
+                            value = 32000 - value
+                        else:
+                            value = -32000 - value
+
+                    is_bound = False
+                    if tokens and tokens[0] in ["lowerbound", "upperbound"]:
+                        is_bound = True
+                        tokens.pop(0)
+
+                    was_bound = len(bound) < multipv or len(bound[multipv - 1]) <= depth or bound[multipv - 1][depth]
+                    set_table(bound, is_bound)
+
+                    if was_bound or not is_bound:
+                        set_table(scores, value)
+                elif parameter == "pv":
+                    set_table(pvs, " ".join(tokens))
+                    break
         else:
             logging.warning("Unexpected engine response to go: %s %s", command, arg)
 
