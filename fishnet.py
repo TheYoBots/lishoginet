@@ -945,7 +945,6 @@ class Worker(threading.Thread):
         result = self.make_request()
         start = last_progress_report = time.time()
 
-        depth = job.get("depth")
         multipv = job.get("multipv")
         skip = job.get("skipPositions", [])
 
@@ -986,7 +985,7 @@ class Worker(threading.Thread):
             go(self.stockfish, job["position"], moves[0:ply],
                nodes=job.get("nodes") or 3500000,
                movetime=int(MAX_MOVE_TIME * 1000),
-               depth=depth)
+               depth=job.get("depth"))
             scores, nodes, times, pvs = recv_analysis(self.stockfish)
 
             if multipv is None:
