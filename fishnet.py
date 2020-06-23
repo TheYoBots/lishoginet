@@ -998,7 +998,7 @@ class Worker(threading.Thread):
                     result["analysis"][ply]["nodes"] = n = nodes[0][depth]
                     result["analysis"][ply]["time"] = t = times[0][depth]
                     if t > 200:
-                        result["analysis"][ply]["nps"] = n // t
+                        result["analysis"][ply]["nps"] = n * 1000 // t
                 except IndexError:
                     pass
                 try:
