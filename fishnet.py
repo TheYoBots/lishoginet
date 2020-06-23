@@ -476,6 +476,25 @@ def recv_bestmove(p):
             logging.warning("Unexpected engine response to go: %s %s", command, arg)
 
 
+def encode_score(kind, value):
+    if kind == "mate":
+        if value > 0:
+            return 32000 - value
+        else:
+            return -32000 - value
+    elif kind == "cp":
+        return min(max(value, -30000), 30000)
+
+
+def decode_score(score):
+    if score > 30000:
+        return {"mate": 32000 - score}
+    elif score < -30000:
+        return {"mate": -32000 - score}
+    else:
+        return {"cp": score}
+
+
 def recv_analysis(p):
     scores = []
     nodes = []
@@ -514,13 +533,7 @@ def recv_analysis(p):
                     set_table(times, int(tokens.pop(0)))
                 elif parameter == "score":
                     kind = tokens.pop(0)
-                    value = int(tokens.pop(0))
-
-                    if kind == "mate":
-                        if value > 0:
-                            value = 32000 - value
-                        else:
-                            value = -32000 - value
+                    value = encode_score(kind, int(tokens.pop(0)))
 
                     is_bound = False
                     if tokens and tokens[0] in ["lowerbound", "upperbound"]:
