@@ -998,12 +998,12 @@ class Worker(threading.Thread):
             logging.info("%s took %0.1fs (%0.1fs per position)",
                          self.job_name(job),
                          end - start, t)
-            if t > 0.95 * MAX_MOVE_TIME:
+            if t > 0.95 * MAX_MOVE_TIME * (multipv or 1):
                 logging.warning("Extremely slow (%0.1fs per position). If this happens frequently, it is better to stop and defer to clients with better hardware.", t)
-            elif t > TARGET_MOVE_TIME + 0.1 and self.slow < MAX_SLOW_BACKOFF:
+            elif t > TARGET_MOVE_TIME * (multipv or 1) + 0.1 and self.slow < MAX_SLOW_BACKOFF:
                 self.slow = min(self.slow * 2, MAX_SLOW_BACKOFF)
                 logging.info("Slower than %0.1fs per position (%0.1fs). Will accept only older user requests (backlog >= %0.1fs).", TARGET_MOVE_TIME, t, self.slow)
-            elif t < TARGET_MOVE_TIME - 0.1 and self.slow > 0.1:
+            elif t < TARGET_MOVE_TIME * (multipv or 1) - 0.1 and self.slow > 0.1:
                 self.slow = max(self.slow / 2, 0.1)
                 if self.is_alive() and self.slow > 0.5:
                     logging.info("Nice, faster than %0.1fs per position (%0.1fs)! Will accept younger user requests (backlog >= %0.1fs).", TARGET_MOVE_TIME, t, self.slow)
