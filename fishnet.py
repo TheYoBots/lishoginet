@@ -450,9 +450,9 @@ def go(p, position, moves, movetime=None, clock=None, depth=None, nodes=None):
         builder.append(str(depth))
     if clock is not None:
         builder.append("wtime")
-        builder.append(str(clock["wtime"] * 10))
+        builder.append(str(max(1, clock["wtime"] * 10)))
         builder.append("btime")
-        builder.append(str(clock["btime"] * 10))
+        builder.append(str(max(1, clock["btime"] * 10)))
         builder.append("winc")
         builder.append(str(clock["inc"] * 1000))
         builder.append("binc")
