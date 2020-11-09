@@ -18,6 +18,11 @@ EXE=stockfish-"$ARCH"
 case "$ARCH" in
     aarch64|arm)
         ARCH=armv7
+        if [ -f /proc/cpuinfo ]; then
+            if grep "^CPU architecture" /proc/cpuinfo | grep -q 8 ; then
+                ARCH=armv8
+            fi
+        fi
         EXE=stockfish-"$ARCH"
         ;;
     x86_64)
