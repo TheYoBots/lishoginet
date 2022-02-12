@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 # PYTHON_ARGCOMPLETE_OK
 
-# This file is part of the lichess.org fishnet client.
+# This file is part of the lishogi.org lishoginet client.
 # Copyright (c) 2016-2020 Niklas Fiekas <niklas.fiekas@backscattering.de>
+# Copyright (c) 2022- TheYoBots (for lishogi) <contact@lishogi.org>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,7 +19,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Distributed Stockfish analysis for lichess.org"""
+"""Distributed Fairy-Stockfish analysis for lishogi.org"""
 
 from __future__ import print_function
 from __future__ import division
@@ -48,7 +49,7 @@ import string
 try:
     import requests
 except ImportError:
-    print("fishnet requires the 'requests' module.", file=sys.stderr)
+    print("lishoginet requires the 'requests' module.", file=sys.stderr)
     print("Try 'pip install requests' or install python-requests from your distro packages.", file=sys.stderr)
     print(file=sys.stderr)
     raise
@@ -95,15 +96,15 @@ except NameError:
     DEAD_ENGINE_ERRORS = (EOFError, IOError)
 
 
-__version__ = "1.18.1"  # remember to update changelog
+__version__ = "0.1"  # remember to update changelog
 
-__author__ = "Niklas Fiekas"
-__email__ = "niklas.fiekas@backscattering.de"
+__author__ = "Yohaan Nathan"
+__email__ = "yohaan.nathanjw@gmail.com"
 __license__ = "GPLv3+"
 
-DEFAULT_CONFIG = "fishnet.ini"
-DEFAULT_ENDPOINT = "https://lichess.org/fishnet/"
-STOCKFISH_RELEASES = "https://api.github.com/repos/niklasf/Stockfish/releases/latest"
+DEFAULT_CONFIG = "lishoginet.ini"
+DEFAULT_ENDPOINT = "https://lishogi.org/fishnet/"
+STOCKFISH_RELEASES = "https://api.github.com/repos/ianfab/Fairy-Stockfish/releases/latest"
 DEFAULT_THREADS = 8
 HASH_MIN = 16
 HASH_DEFAULT = 256
@@ -126,14 +127,14 @@ def intro():
     return r"""
 .   _________         .    .
 .  (..       \_    ,  |\  /|
-.   \       O  \  /|  \ \/ /
-.    \______    \/ |   \  /      _____ _     _     _   _      _
-.       vvvv\    \ |   /  |     |  ___(_)___| |__ | \ | | ___| |_
-.       \^^^^  ==   \_/   |     | |_  | / __| '_ \|  \| |/ _ \ __|
-.        `\_   ===    \.  |     |  _| | \__ \ | | | |\  |  __/ |_
-.        / /\_   \ /      |     |_|   |_|___/_| |_|_| \_|\___|\__| %s
+.   \       O  \  /|  \ \/ /     _ _     _                 _ _   _      _
+.    \______    \/ |   \  /     | (_)___| |__   ___   __ _(_) \ | | ___| |_
+.       vvvv\    \ |   /  |     | | / __| '_ \ / _ \ / _` | |  \| |/ _ \ __|
+.       \^^^^  ==   \_/   |     | | \__ \ | | | (_) | (_| | | |\  |  __/ |_
+.        `\_   ===    \.  |     |_|_|___/_| |_|\___/ \__, |_|_| \_|\___|\__| %s
+.        / /\_   \ /      |                          |___/
 .        |/   \_  \|      /
-.               \________/      Distributed Stockfish analysis for lichess.org
+.               \________/      Distributed Fairy-Stockfish analysis for lishogi.org
 """.lstrip() % __version__
 
 
@@ -376,7 +377,7 @@ def recv(p):
             return line
 
 
-def recv_uci(p):
+def recv_usi(p):
     command_and_args = recv(p).split(None, 1)
     if len(command_and_args) == 1:
         return command_and_args[0], ""
@@ -384,37 +385,37 @@ def recv_uci(p):
         return command_and_args
 
 
-def uci(p):
-    send(p, "uci")
+def usi(p):
+    send(p, "usi")
 
     engine_info = {}
     variants = set()
 
     while True:
-        command, arg = recv_uci(p)
+        command, arg = recv_usi(p)
 
-        if command == "uciok":
+        if command == "usiok":
             return engine_info, variants
         elif command == "id":
             name_and_value = arg.split(None, 1)
             if len(name_and_value) == 2:
                 engine_info[name_and_value[0]] = name_and_value[1]
         elif command == "option":
-            if arg.startswith("name UCI_Variant type combo default chess"):
+            if arg.startswith("name USI_Variant type combo default shogi"):
                 for variant in arg.split(" ")[6:]:
                     if variant != "var":
                         variants.add(variant)
-        elif command == "Stockfish" and " by " in arg:
+        elif command == "Fairy-Stockfish" and " by " in arg:
             # Ignore identification line
             pass
         else:
-            logging.warning("Unexpected engine response to uci: %s %s", command, arg)
+            logging.warning("Unexpected engine response to usi: %s %s", command, arg)
 
 
 def isready(p):
     send(p, "isready")
     while True:
-        command, arg = recv_uci(p)
+        command, arg = recv_usi(p)
         if command == "readyok":
             break
         elif command == "info" and arg.startswith("string "):
@@ -435,7 +436,7 @@ def setoption(p, name, value):
 
 
 def go(p, position, moves, movetime=None, clock=None, depth=None, nodes=None):
-    send(p, "position fen %s moves %s" % (position, " ".join(moves)))
+    send(p, "position sfen %s moves %s" % (position, " ".join(moves)))
 
     builder = []
     builder.append("go")
@@ -449,21 +450,24 @@ def go(p, position, moves, movetime=None, clock=None, depth=None, nodes=None):
         builder.append("depth")
         builder.append(str(depth))
     if clock is not None:
-        builder.append("wtime")
-        builder.append(str(max(1, clock["wtime"] * 10)))
         builder.append("btime")
         builder.append(str(max(1, clock["btime"] * 10)))
-        builder.append("winc")
-        builder.append(str(clock["inc"] * 1000))
-        builder.append("binc")
-        builder.append(str(clock["inc"] * 1000))
+        builder.append("wtime")
+        builder.append(str(max(1, clock["wtime"] * 10)))
+        builder.append("byoyomi")
+        builder.append(str(clock["byo"] * 1000))
+        if(clock["inc"] > 0):
+            builder.append("binc")
+            builder.append(str(clock["inc"] * 1000))
+            builder.append("winc")
+            builder.append(str(clock["inc"] * 1000))
 
     send(p, " ".join(builder))
 
 
 def recv_bestmove(p):
     while True:
-        command, arg = recv_uci(p)
+        command, arg = recv_usi(p)
         if command == "bestmove":
             bestmove = arg.split()[0]
             if bestmove and bestmove != "(none)":
@@ -504,7 +508,7 @@ def recv_analysis(p):
     bound = []
 
     while True:
-        command, arg = recv_uci(p)
+        command, arg = recv_usi(p)
 
         if command == "bestmove":
             return scores, nodes, times, pvs
@@ -555,16 +559,10 @@ def recv_analysis(p):
 def set_variant_options(p, variant):
     variant = variant.lower()
 
-    setoption(p, "UCI_Chess960", variant in ["fromposition", "chess960"])
-
-    if variant in ["standard", "fromposition", "chess960"]:
-        setoption(p, "UCI_Variant", "chess")
-    elif variant == "antichess":
-        setoption(p, "UCI_Variant", "giveaway")
-    elif variant == "threecheck":
-        setoption(p, "UCI_Variant", "3check")
+    if variant in ["standard", "fromposition"]:
+        setoption(p, "USI_Variant", "shogi")
     else:
-        setoption(p, "UCI_Variant", variant)
+        setoption(p, "USI_Variant", variant)
 
 
 class ProgressReporter(threading.Thread):
@@ -747,7 +745,7 @@ class Worker(threading.Thread):
                     error = response.json()["error"]
                     logging.error(error)
 
-                    if "Please restart fishnet to upgrade." in error:
+                    if "Please restart lishoginet to upgrade." in error:
                         logging.error("Stopping worker for update.")
                         raise UpdateRequired()
                 except (KeyError, ValueError):
@@ -789,7 +787,7 @@ class Worker(threading.Thread):
                     slow = user_wait >= system_wait + 1.0
                     return min(user_wait, system_wait), slow
                 elif response.status_code == 404:
-                    # Status deliberately not implemented (for example lila-fishnet)
+                    # Status deliberately not implemented
                     return 0, False
                 elif response.status_code == 429:
                     logging.error("Too many requests while checking queue status. Waiting 60s ...")
@@ -840,24 +838,23 @@ class Worker(threading.Thread):
             self.stockfish = open_process(get_stockfish_command(self.conf, False),
                                           get_engine_dir(self.conf))
 
-        self.stockfish_info, _ = uci(self.stockfish)
+        self.stockfish_info, _ = usi(self.stockfish)
         self.stockfish_info.pop("author", None)
         logging.info("Started %s, threads: %s (%d), pid: %d",
                      self.stockfish_info.get("name", "Stockfish <?>"),
                      "+" * self.threads, self.threads, self.stockfish.pid)
 
-        # Prepare UCI options
+        # Prepare USI options
         self.stockfish_info["options"] = {}
-        self.stockfish_info["options"]["threads"] = str(self.threads)
-        self.stockfish_info["options"]["hash"] = str(self.memory)
-        self.stockfish_info["options"]["analysis contempt"] = "Off"
+        self.stockfish_info["options"]["Threads"] = str(self.threads)
+        self.stockfish_info["options"]["USI_Hash"] = str(self.memory)
 
         # Custom options
         if self.conf.has_section("Stockfish"):
             for name, value in self.conf.items("Stockfish"):
                 self.stockfish_info["options"][name] = value
 
-        # Set UCI options
+        # Set USI options
         for name, value in self.stockfish_info["options"].items():
             setoption(self.stockfish, name, value)
 
@@ -865,7 +862,7 @@ class Worker(threading.Thread):
 
     def make_request(self):
         return {
-            "fishnet": {
+            "lishoginet": {
                 "version": __version__,
                 "python": platform.python_version(),
                 "apikey": get_key(self.conf),
@@ -909,11 +906,11 @@ class Worker(threading.Thread):
                       self.job_name(job), variant, lvl)
 
         set_variant_options(self.stockfish, job.get("variant", "standard"))
-        setoption(self.stockfish, "UCI_LimitStrength", lvl < 8)
-        setoption(self.stockfish, "UCI_Elo", LVL_ELO[lvl - 1])
-        setoption(self.stockfish, "UCI_AnalyseMode", False)
-        setoption(self.stockfish, "MultiPV", 1)
-        send(self.stockfish, "ucinewgame")
+        setoption(self.stockfish, "USI_LimitStrength", lvl < 8)
+        setoption(self.stockfish, "USI_Elo", LVL_ELO[lvl - 1])
+        setoption(self.stockfish, "USI_AnalyseMode", False)
+        setoption(self.stockfish, "USI_MultiPV", 1)
+        send(self.stockfish, "usinewgame")
         isready(self.stockfish)
 
         movetime = int(round(LVL_MOVETIMES[lvl - 1] / (self.threads * 0.9 ** (self.threads - 1))))
@@ -950,11 +947,11 @@ class Worker(threading.Thread):
         skip = job.get("skipPositions", [])
 
         set_variant_options(self.stockfish, variant)
-        setoption(self.stockfish, "UCI_LimitStrength", False)
-        setoption(self.stockfish, "UCI_AnalyseMode", True)
-        setoption(self.stockfish, "MultiPV", multipv or 1)
+        setoption(self.stockfish, "USI_LimitStrength", False)
+        setoption(self.stockfish, "USI_AnalyseMode", True)
+        setoption(self.stockfish, "USI_MultiPV", multipv or 1)
 
-        send(self.stockfish, "ucinewgame")
+        send(self.stockfish, "usinewgame")
         isready(self.stockfish)
 
         if multipv is None:
@@ -1074,24 +1071,29 @@ class BenchmarkWorker(Worker):
         # Fake response from a small set of random positions
         game_id, moves = random.choice([
             (
-                "RzXDxLUD",
-                "d2d4 g8f6 c2c4 e7e6 b1c3 d7d5 c4d5 e6d5 c1g5 c7c6 e2e3 f8e7 f1d3 e8g8 g1e2 c8d7 "
-                "e1g1 h7h6 g5h4 d7e6 f2f3 b8d7 g1h1 f8e8 d1d2 f6e4 f3e4 e7h4 e4e5 h4g5 e2f4 d7f8 "
-                "d2f2 d8e7 a1e1 f7f6 h2h4 g5f4 e3f4 f6f5 g2g4 e7f7 f1g1 g8h8 c3d1 f8g6 d1e3 g6e7 "
-                "e1f1 e8f8 f2h2 c6c5 h4h5 c5d4 e3c2 f5g4 f4f5 e6f5 c2d4 f5d3 f1f7 d3e4 f7f3 g4f3 "
-                "h2f2 f8f4 h1h2 a8f8 d4e6 f4f5 e6f8 f5h5 h2g3 e7f5 g3f4 g7g5 f4g4 h5h4 f2h4 f5h4 "
-                "e5e6 h8g7 e6e7 g7f7 f8d7 f7e7 d7e5 h4f5 e5f3 f5e3 g4g3 e3c4 g3f2 e7d6 f3d4 h6h5 "
-                "d4e2 h5h4 g1g5 d5d4 g5h5 d4d3 h5h6 d6e5 e2c3 e5d4 h6h5 e4f5 h5h4 f5e4 h4e4 d4c5 "
-                "e4e5 c5b4 e5e4 b4a5 e4c4 b7b6 c4a4",
+                "iMZBXAy4",
+                "3i4h 3c3d 7g7f 4c4d 5i6h 8b4b 9g9f 9c9d 4i5h 7a7b 5g5f 5a6b 8h7g 3d3e 6h7h 4b3b "
+                "8g8f 4a5b 7h8g 6b7a 2g2f 3a4b 7i7h 3b3d 4g4f 7c7d 4h4g 8c8d 7g6f 4b4c 8i7g 2b3c "
+                "6f8d 4c5d 2f2e 4d4e 2h4h 2c2d 4h2h 4e4f 4g4f P*4e 4f5g 2d2e 2h2e P*2d 2e2f 3e3f "
+                "3g3f 3c4d 2f2g 2a3c 8d6f 4d6f 5g6f 4e4f B*4a 9d9e 9f9e B*3h 2g2h 4f4g+ 4a5b+ 6a5b "
+                "2h3h 4g3h G*3e 3d3e 3f3e 3h2i R*2a G*6a 2a1a+ N*8c L*8d 8c9e 9i9e 9a9e 8d8a+ 7a8a "
+                "P*9f 9e9f P*9h 9f9h+ 8g9h L*9b P*9g L*9d N*9f 9d9f 9g9f 9b9f P*9g 9f9g+ 9h9g P*9f "
+                "9g9h P*4a L*8e 8a7a B*9c 7a6b 8e8b+ P*8g 9h8g B*9i 7h8i R*9g 8g7h N*6e 8b7b 6a7b "
+                "S*8h 6e7g+ 6f7g N*6e 7g6f 9i8h+ 8i8h 9g9h+ L*7c L*7g 6f7g 6b7c N*8e 7c8c L*9e 6e7g+ "
+                "7h7g S*6h 5h6h 9h8h 7g8h P*8g 8h8g S*9h 8g9h S*8g 9h8g 9f9g+ 8g7g 9g8g 7g8g 1c1d "
+                "R*8d 8c9b",
             ), (
-                "KU8R1KDQ",
-                "e2e4 e7e5 g1f3 b8c6 f1c4 f8c5 c2c3 g8f6 d2d4 e5d4 c3d4 c5b4 b1d2 f6e4 e1g1 d7d5 "
-                "d2e4 d5c4 d4d5 c6e7 d1a4 c7c6 a4b4 e7d5 e4d6 e8d7 b4a3 d8e7 f3e5 d7c7 e5f7 h8f8 "
-                "c1g5 e7d7 d6b5 c6b5 a3f8 d7e6 f8d8 c7c6 f7d6 e6d6 d8e8 d6d7 e8g8 d7f5 g5h4 d5c7 "
-                "h4g3 c8e6 g8g7 c7d5 f1e1 a8g8 g7h6 g8e8 e1e5 f5g6 h6d2 e8d8 a1e1 e6f7 d2a5 d8d7 "
-                "a5a7 g6c2 a7b8 c2b2 e5d5 c6d5 h2h3 c4c3 e1e5 d5d4 b8a7 d4d3 e5e3 d3c2 g1h2 c2b1 "
-                "e3e1 b1c2 e1e2 d7d2 a7e3 f7g6 e2e1 b2a2 g3e5 a2c4 e5c3 c4c3 e1c1 c2c1 e3c3 d2c2 "
-                "c3a1 c1d2 h2g3 d2d3 g3h2 c2c3 a1a3 d3d4 a3a5 b5b4 a5a6 b7a6 h3h4 b4b3 g2g3 b3b2",
+                "Drl9ZnFE",
+                "2h6h 1c1d 1g1f 8c8d 7g7f 3c3d 6g6f 6a5b 5i4h 5a4b 3i3h 4b3b 4h3i 7a6b 6i5h 5c5d "
+                "7i7h 8d8e 8h7g 7c7d 3i2h 2b3c 4g4f 3b2b 7h6g 4c4d 2g2f 1a1b 6f6e 4a3b 3g3f 2b1a "
+                "2i3g 3a2b 6g5f 6b5c 5h4h 5b4c 3h2g 8b7b 7g6f 3c5a 9g9f 5a7c 4h4g 7b8b 6f7g 9c9d "
+                "4i3h 3b3a 6h4h 4c3c 4h6h 3c3b 6h6i 3a4b 6i2i 4b3c 2i6i 2c2d 4g4h 3c4c 4h4g 8b4b "
+                "7g6f 4b7b 6f8h 4c4b 8h6f 7b8b 6f7g 2b3c 4f4e 4d4e 6e6d 7c6d 6i6d 5c6d 3g4e 3c2b "
+                "B*4d R*6i 4d7a+ 8b8c 3f3e 6i8i+ 7g2b+ 3b2b 3e3d B*7g S*3a 4b3b 3a2b+ 3b2b P*4d N*3e "
+                "4d4c+ S*3i 2h1g 3e4g+ 5f4g 7g5e+ P*4f 1d1e N*3c 3i4h 3c2a+ 1a2a 4e3c 5e3c 3d3c+ 1e1f "
+                "2g1f 8i1i N*1h 1b1f 1g2g 1i1h 2g3f 1h3h 4g3h P*3e 7a3e G*3g 3h3g 4h3g+ 3f3g N*4e "
+                "3e4e N*2e 2f2e P*3f 4e3f S*2f 3g2f S*1g 2f3g N*4e 4f4e 1g2h 3g2h 1f1g+ 2h3g G*2f "
+                "3f2f L*3d 3c3d 1g2g 3g2g 2a1b P*1c 1b2a G*1a 2a1a N*2c 2b2c G*1b",
             ),
         ])
 
@@ -1104,7 +1106,7 @@ class BenchmarkWorker(Worker):
                 "nodes": 4000000,
                 "skipPositions": [0,1,2,3,4,5,6,],
                 "game_id": game_id,
-                "position": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                "position": "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1",
                 "variant": "standard",
                 "moves": moves,
             }
@@ -1214,7 +1216,7 @@ def download_github_release(conf, release_page, filename):
         logging.info("Local %s is newer than release", filename)
         return filename
     elif response.status_code != 200:
-        raise ConfigError("Failed to look up latest Stockfish release (status %d)" % (response.status_code, ))
+        raise ConfigError("Failed to look up latest Fairy-Stockfish release (status %d)" % (response.status_code, ))
 
     release = response.json()
 
@@ -1297,7 +1299,7 @@ def update_self():
                           "pip install --user")
 
     # Look up the latest version
-    result = requests.get("https://pypi.org/pypi/fishnet/json", timeout=HTTP_TIMEOUT).json()
+    result = requests.get("https://pypi.org/pypi/lishoginet/json", timeout=HTTP_TIMEOUT).json()
     latest_version = result["info"]["version"]
     url = result["releases"][latest_version][0]["url"]
     if latest_version == __version__:
@@ -1346,7 +1348,7 @@ def update_self():
 
 def load_conf(args):
     conf = configparser.ConfigParser()
-    conf.add_section("Fishnet")
+    conf.add_section("Lishoginet")
     conf.add_section("Stockfish")
 
     if not args.no_conf:
@@ -1360,25 +1362,25 @@ def load_conf(args):
                 raise ConfigError("Could not read config file: %s" % config_file)
 
     if hasattr(args, "engine_dir") and args.engine_dir is not None:
-        conf.set("Fishnet", "EngineDir", args.engine_dir)
+        conf.set("Lishoginet", "EngineDir", args.engine_dir)
     if hasattr(args, "stockfish_command") and args.stockfish_command is not None:
-        conf.set("Fishnet", "StockfishCommand", args.stockfish_command)
+        conf.set("Lishoginet", "StockfishCommand", args.stockfish_command)
     if hasattr(args, "key") and args.key is not None:
-        conf.set("Fishnet", "Key", args.key)
+        conf.set("Lishoginet", "Key", args.key)
     if hasattr(args, "cores") and args.cores is not None:
-        conf.set("Fishnet", "Cores", args.cores)
+        conf.set("Lishoginet", "Cores", args.cores)
     if hasattr(args, "memory") and args.memory is not None:
-        conf.set("Fishnet", "Memory", args.memory)
+        conf.set("Lishoginet", "Memory", args.memory)
     if hasattr(args, "threads_per_process") and args.threads_per_process is not None:
-        conf.set("Fishnet", "ThreadsPerProcess", str(args.threads_per_process))
+        conf.set("Lishoginet", "ThreadsPerProcess", str(args.threads_per_process))
     if hasattr(args, "endpoint") and args.endpoint is not None:
-        conf.set("Fishnet", "Endpoint", args.endpoint)
+        conf.set("Lishoginet", "Endpoint", args.endpoint)
     if hasattr(args, "fixed_backoff") and args.fixed_backoff is not None:
-        conf.set("Fishnet", "FixedBackoff", str(args.fixed_backoff))
+        conf.set("Lishoginet", "FixedBackoff", str(args.fixed_backoff))
     if hasattr(args, "user_backlog") and args.user_backlog is not None:
-        conf.set("Fishnet", "UserBacklog", args.user_backlog)
+        conf.set("Lishoginet", "UserBacklog", args.user_backlog)
     if hasattr(args, "system_backlog") and args.system_backlog is not None:
-        conf.set("Fishnet", "SystemBacklog", args.system_backlog)
+        conf.set("Lishoginet", "SystemBacklog", args.system_backlog)
     for option_name, option_value in args.setoption:
         conf.set("Stockfish", option_name.lower(), option_value)
 
@@ -1421,7 +1423,7 @@ def configure(args):
     print(file=out)
 
     conf = configparser.ConfigParser()
-    conf.add_section("Fishnet")
+    conf.add_section("Lishoginet")
     conf.add_section("Stockfish")
 
     # Ensure the config file is going to be writable
@@ -1442,15 +1444,15 @@ def configure(args):
     else:
         engine_dir = validate_engine_dir(args.engine_dir)
         print("Engine working directory: %s" % engine_dir, file=out)
-    conf.set("Fishnet", "EngineDir", engine_dir)
+    conf.set("Lishoginet", "EngineDir", engine_dir)
 
     # Stockfish command
     print(file=out)
-    print("Fishnet uses a custom Stockfish build with variant support.", file=out)
-    print("Stockfish is licensed under the GNU General Public License v3.", file=out)
-    print("You can find the source at: https://github.com/ddugovic/Stockfish", file=out)
+    print("Lishoginet Fairy-Stockfish build with variant support.", file=out)
+    print("Fairy-Stockfish is licensed under the GNU General Public License v3.", file=out)
+    print("You can find the source at: https://github.com/ianfab/Fairy-Stockfish", file=out)
     print(file=out)
-    print("You can build lichess.org custom Stockfish yourself and provide", file=out)
+    print("You can build Fairy-Stockfish yourself and provide", file=out)
     print("the path or automatically download a precompiled binary.", file=out)
     print(file=out)
     if args.stockfish_command is None:
@@ -1461,9 +1463,9 @@ def configure(args):
         stockfish_command = validate_stockfish_command(args.stockfish_command, conf)
         print("Path or command: %s" % stockfish_command, file=out)
     if not stockfish_command:
-        conf.remove_option("Fishnet", "StockfishCommand")
+        conf.remove_option("Lishoginet", "StockfishCommand")
     else:
-        conf.set("Fishnet", "StockfishCommand", stockfish_command)
+        conf.set("Lishoginet", "StockfishCommand", stockfish_command)
     print(file=out)
 
     # Cores
@@ -1475,57 +1477,57 @@ def configure(args):
     else:
         cores = validate_cores(args.cores)
         print("Number of cores to use for engine threads: %d" % cores, file=out)
-    conf.set("Fishnet", "Cores", str(cores))
+    conf.set("Lishoginet", "Cores", str(cores))
 
     # Backlog
     if args.user_backlog is None and args.system_backlog is None:
         print(file=out)
         print("You can choose to join only if a backlog is building up. Examples:", file=out)
-        print("* Rented server exlusively for fishnet: choose no", file=out)
+        print("* Rented server exlusively for lishoginet: choose no", file=out)
         print("* Running on laptop: choose yes", file=out)
         if config_input("Would you prefer to keep your client idle? (default: no) ", parse_bool, out):
-            conf.set("Fishnet", "UserBacklog", "short")
-            conf.set("Fishnet", "SystemBacklog", "long")
+            conf.set("Lishoginet", "UserBacklog", "short")
+            conf.set("Lishoginet", "SystemBacklog", "long")
         else:
-            conf.set("Fishnet", "UserBacklog", "0s")
-            conf.set("Fishnet", "SystemBacklog", "0s")
+            conf.set("Lishoginet", "UserBacklog", "0s")
+            conf.set("Lishoginet", "SystemBacklog", "0s")
         print(file=out)
     else:
         print("Using custom backlog parameters.", file=out)
         if args.user_backlog is not None:
             parse_duration(args.user_backlog)
-            conf.set("Fishnet", "UserBacklog", args.user_backlog)
+            conf.set("Lishoginet", "UserBacklog", args.user_backlog)
         if args.system_backlog is not None:
             parse_duration(args.system_backlog)
-            conf.set("Fishnet", "SystemBacklog", args.system_backlog)
+            conf.set("Lishoginet", "SystemBacklog", args.system_backlog)
 
     # Advanced options
     if args.endpoint is None:
         if config_input("Configure advanced options? (default: no) ", parse_bool, out):
-            endpoint = config_input("Fishnet API endpoint (default: %s): " % DEFAULT_ENDPOINT, validate_endpoint, out)
+            endpoint = config_input("Lishoginet API endpoint (default: %s): " % DEFAULT_ENDPOINT, validate_endpoint, out)
         else:
             endpoint = DEFAULT_ENDPOINT
     else:
         endpoint = validate_endpoint(args.endpoint)
-        print("Fishnet API endpoint: %s" % endpoint, file=out)
-    conf.set("Fishnet", "Endpoint", endpoint)
+        print("Lishoginet API endpoint: %s" % endpoint, file=out)
+    conf.set("Lishoginet", "Endpoint", endpoint)
 
     # Change key?
     if args.key is None:
         key = None
-        if conf.has_option("Fishnet", "Key"):
-            if not config_input("Change fishnet key? (default: no) ", parse_bool, out):
-                key = conf.get("Fishnet", "Key")
+        if conf.has_option("Lishoginet", "Key"):
+            if not config_input("Change lishoginet key? (default: no) ", parse_bool, out):
+                key = conf.get("Lishoginet", "Key")
 
         # Key
         if key is None:
-            status = "https://lichess.org/get-fishnet" if is_production_endpoint(conf) else "probably not required"
-            key = config_input("Personal fishnet key (append ! to force, %s): " % status,
+            status = "https://lishogi.org/get-fishnet" if is_production_endpoint(conf) else "probably not required"
+            key = config_input("Personal lishoginet key (append ! to force): "
                                lambda v: validate_key(v, conf, network=True), out)
     else:
         key = validate_key(args.key, conf, network=True)
-        print("Personal fishnet key: %s" % (("*" * len(key) or "(none)", )), file=out)
-    conf.set("Fishnet", "Key", key)
+        print("Personal lishoginet key: %s" % (("*" * len(key) or "(none)", )), file=out)
+    conf.set("Lishoginet", "Key", key)
     logging.getLogger().addFilter(CensorLogFilter(key))
 
     # Confirm
@@ -1563,15 +1565,15 @@ def validate_stockfish_command(stockfish_command, conf):
 
     # Ensure the required options are supported
     process = open_process(stockfish_command, engine_dir)
-    _, variants = uci(process)
+    _, variants = usi(process)
     kill_process(process)
 
     logging.debug("Supported variants: %s", ", ".join(variants))
 
-    required_variants = set(["chess", "giveaway", "atomic", "crazyhouse", "horde",  "kingofthehill", "racingkings", "3check"])
+    required_variants = set(["shogi", "minishogi"])
     missing_variants = required_variants.difference(variants)
     if missing_variants:
-        raise ConfigError("Ensure you are using lichess custom Stockfish. "
+        raise ConfigError("Ensure you are using Fairy-Stockfish. "
                           "Unsupported variants: %s" % ", ".join(missing_variants))
 
     return stockfish_command
@@ -1708,7 +1710,7 @@ def validate_endpoint(endpoint, default=DEFAULT_ENDPOINT):
 def validate_key(key, conf, network=False):
     if not key or not key.strip():
         if is_production_endpoint(conf):
-            raise ConfigError("Fishnet key required")
+            raise ConfigError("Lishoginet key required")
         else:
             return ""
 
@@ -1718,19 +1720,19 @@ def validate_key(key, conf, network=False):
     key = key.rstrip("!").strip()
 
     if not re.match(r"^[a-zA-Z0-9]+$", key):
-        raise ConfigError("Fishnet key is expected to be alphanumeric")
+        raise ConfigError("Lishoginet key is expected to be alphanumeric")
 
     if network:
         response = requests.get(get_endpoint(conf, "key/%s" % key), timeout=HTTP_TIMEOUT)
         if response.status_code == 404:
-            raise ConfigError("Invalid or inactive fishnet key")
+            raise ConfigError("Invalid or inactive lishoginet key")
         else:
             response.raise_for_status()
 
     return key
 
 
-def conf_get(conf, key, default=None, section="Fishnet"):
+def conf_get(conf, key, default=None, section="Lishoginet"):
     if not conf.has_section(section):
         return default
     elif not conf.has_option(section, key):
@@ -1761,7 +1763,7 @@ def get_endpoint(conf, sub=""):
 def is_production_endpoint(conf):
     endpoint = validate_endpoint(conf_get(conf, "Endpoint"))
     hostname = urlparse.urlparse(endpoint).hostname
-    return hostname == "lichess.org" or hostname.endswith(".lichess.org")
+    return hostname == "lishogi".org" or hostname.endswith(".lishogi.org")
 
 
 def get_key(conf):
@@ -1781,17 +1783,17 @@ def start_backoff(conf):
 
 def update_available():
     try:
-        result = requests.get("https://pypi.org/pypi/fishnet/json", timeout=HTTP_TIMEOUT).json()
+        result = requests.get("https://pypi.org/pypi/lishoginet/json", timeout=HTTP_TIMEOUT).json()
         latest_version = result["info"]["version"]
     except Exception:
         logging.exception("Failed to check for update on PyPI")
         return False
 
     if latest_version == __version__:
-        logging.info("[fishnet v%s] Client is up to date", __version__)
+        logging.info("[lishoginet v%s] Client is up to date", __version__)
         return False
     else:
-        logging.info("[fishnet v%s] Update available on PyPI: %s",
+        logging.info("[lishoginet v%s] Update available on PyPI: %s",
                      __version__, latest_version)
         return True
 
@@ -1838,9 +1840,12 @@ def display_config(args, conf):
     print()
 
     if conf.has_section("Stockfish") and conf.items("Stockfish"):
-        print("Using custom UCI options is discouraged:")
+        print("Using custom USI options is discouraged:")
         for name, value in conf.items("Stockfish"):
             if name.lower() == "hash":
+                hint = " (use --memory instead)"
+            # fairy stockfish usi protocol
+            elif name.lower() == "usi_hash":
                 hint = " (use --memory instead)"
             elif name.lower() == "threads":
                 hint = " (use --threads-per-process instead)"
@@ -1873,7 +1878,7 @@ def cmd_benchmark(args):
     # Start all threads
     for i, worker in enumerate(workers):
         worker.set_name("><> %d" % (i + 1))
-        worker.setDaemon(True)
+        worker.daemon = True
         worker.start()
 
     for worker in workers:
@@ -1898,7 +1903,7 @@ def cmd_benchmark(args):
                 logging.warning("Timed out waiting for worker %s to finish", worker.name)
 
         # Log stats
-        logging.info("[fishnet v%s] Analyzed %d positions, crunched %d million nodes",
+        logging.info("[lishoginet v%s] Analyzed %d positions, crunched %d million nodes",
                      __version__,
                      sum(worker.positions for worker in workers),
                      int(sum(worker.nodes for worker in workers) / 1000 / 1000))
@@ -1957,7 +1962,7 @@ def cmd_run(args):
         buckets[i % instances] += 1
 
     progress_reporter = ProgressReporter(len(buckets) + 4, conf)
-    progress_reporter.setDaemon(True)
+    progress_reporter.daemon = True
     progress_reporter.start()
 
     workers = [Worker(conf, bucket, memory // instances, user_backlog, system_backlog, progress_reporter) for bucket in buckets]
@@ -1965,7 +1970,7 @@ def cmd_run(args):
     # Start all threads
     for i, worker in enumerate(workers):
         worker.set_name("><> %d" % (i + 1))
-        worker.setDaemon(True)
+        worker.daemon = True
         worker.start()
 
     # Wait while the workers are running
@@ -1983,7 +1988,7 @@ def cmd_run(args):
                             raise worker.fatal_error
 
                 # Log stats
-                logging.info("[fishnet v%s] Analyzed %d positions, crunched %d million nodes",
+                logging.info("[lishoginet v%s] Analyzed %d positions, crunched %d million nodes",
                              __version__,
                              sum(worker.positions for worker in workers),
                              int(sum(worker.nodes for worker in workers) / 1000 / 1000))
@@ -2041,7 +2046,7 @@ def cmd_systemd(args):
     if args.command == "systemd-user":
         template = textwrap.dedent("""\
             [Unit]
-            Description=Fishnet client
+            Description=Lishoginet client
             After=network-online.target
             Wants=network-online.target
 
@@ -2061,7 +2066,7 @@ def cmd_systemd(args):
     else:
         template = textwrap.dedent("""\
             [Unit]
-            Description=Fishnet client
+            Description=Lishoginet client
             After=network-online.target
             Wants=network-online.target
 
@@ -2162,19 +2167,19 @@ def cmd_systemd(args):
     if sys.stdout.isatty():
         print("\n# Example usage:", file=sys.stderr)
         if args.command == "systemd-user":
-            print("# python -m fishnet systemd-user | tee ~/.config/systemd/user/fishnet.service", file=sys.stderr)
-            print("# systemctl enable --user fishnet.service", file=sys.stderr)
-            print("# systemctl start --user fishnet.service", file=sys.stderr)
+            print("# python -m lishoginet systemd-user | tee ~/.config/systemd/user/lishoginet.service", file=sys.stderr)
+            print("# systemctl enable --user lishoginet.service", file=sys.stderr)
+            print("# systemctl start --user lishoginet.service", file=sys.stderr)
             print("#", file=sys.stderr)
-            print("# Live view of log: journalctl --follow --user-unit fishnet", file=sys.stderr)
+            print("# Live view of log: journalctl --follow --user-unit lishoginet", file=sys.stderr)
         else:
-            print("# python -m fishnet systemd | sudo tee /etc/systemd/system/fishnet.service", file=sys.stderr)
-            print("# sudo systemctl enable fishnet.service", file=sys.stderr)
-            print("# sudo systemctl start fishnet.service", file=sys.stderr)
+            print("# python -m lishoginet systemd | sudo tee /etc/systemd/system/lishoginet.service", file=sys.stderr)
+            print("# sudo systemctl enable lishoginet.service", file=sys.stderr)
+            print("# sudo systemctl start lishoginet.service", file=sys.stderr)
             print("#", file=sys.stderr)
-            print("# Live view of the log: sudo journalctl --follow -u fishnet", file=sys.stderr)
+            print("# Live view of the log: sudo journalctl --follow -u lishoginet", file=sys.stderr)
             print("#", file=sys.stderr)
-            print("# Need a user unit? python -m fishnet systemd-user", file=sys.stderr)
+            print("# Need a user unit? python -m lishoginet systemd-user", file=sys.stderr)
 
 
 @contextlib.contextmanager
@@ -2322,28 +2327,28 @@ def main(argv):
     # Parse command line arguments
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--verbose", "-v", default=0, action="count", help="increase verbosity")
-    parser.add_argument("--version", action="version", version="fishnet v{0}".format(__version__))
+    parser.add_argument("--version", action="version", version="lishoginet v{0}".format(__version__))
 
     g = parser.add_argument_group("configuration")
     g.add_argument("--auto-update", action="store_true", help="automatically install available updates on startup and at random intervals")
     g.add_argument("--conf", help="configuration file")
     g.add_argument("--no-conf", action="store_true", help="do not use a configuration file")
-    g.add_argument("--key", "--apikey", "-k", help="fishnet api key")
+    g.add_argument("--key", "--apikey", "-k", help="lishoginet api key")
 
     g = parser.add_argument_group("resources")
     g.add_argument("--cores", help="number of cores to use for engine processes (or auto for n - 1, or all for n)")
     g.add_argument("--memory", help="total memory (MB) to use for engine hashtables")
 
     g = parser.add_argument_group("advanced")
-    g.add_argument("--endpoint", help="lichess http endpoint (default: %s)" % DEFAULT_ENDPOINT)
+    g.add_argument("--endpoint", help="lishogi http endpoint (default: %s)" % DEFAULT_ENDPOINT)
     g.add_argument("--engine-dir", help="engine working directory")
-    g.add_argument("--stockfish-command", help="stockfish command (default: download latest precompiled Stockfish)")
+    g.add_argument("--stockfish-command", help="stockfish command (default: download latest precompiled Fairy-Stockfish)")
     g.add_argument("--threads-per-process", type=int, help="hint for the number of threads to use per engine process (default: %d)" % DEFAULT_THREADS)
     g.add_argument("--user-backlog", type=str, help="prefer to run high-priority jobs only if older than this duration (for example 120s)")
     g.add_argument("--system-backlog", type=str, help="prefer to run low-priority jobs only if older than this duration (for example 2h)")
     g.add_argument("--fixed-backoff", action="store_true", default=None, help="only for developers: do not use exponential backoff")
     g.add_argument("--no-fixed-backoff", dest="fixed_backoff", action="store_false", default=None)
-    g.add_argument("--setoption", "-o", nargs=2, action="append", default=[], metavar=("NAME", "VALUE"), help="only for developers: set a custom uci option")
+    g.add_argument("--setoption", "-o", nargs=2, action="append", default=[], metavar=("NAME", "VALUE"), help="only for developers: set a custom usi option")
     g.add_argument("--threads", type=int, dest="ignored_threads", help=argparse.SUPPRESS)  # bc
 
     commands = collections.OrderedDict([

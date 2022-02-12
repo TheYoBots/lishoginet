@@ -1,11 +1,11 @@
 venv
-fishnet.ini
+lishoginet.ini
 *.py[cd]
 .coverage
-stockfish-*
-Stockfish
+fairy-stockfish-*
+Fairy-Stockfish
 build/
 dist/
-fishnet.egg-info/
-fishnet-*.tar.gz
+lishoginet.egg-info/
+lishoginet-*.tar.gz
 .tox/

@@ -1,11 +1,11 @@
 #!/usr/bin/env python
-# Helper script to create and publish a new fishnet release.
+# Helper script to create and publish a new lishoginet release.
 
 from __future__ import print_function
 
 import os
 import sys
-import fishnet
+import lishoginet
 
 try:
     input = raw_input
@@ -39,7 +39,7 @@ def check_docs():
 
 def tag_and_push():
     print("--- TAG AND PUSH -------------------------------")
-    tagname = "v{0}".format(fishnet.__version__)
+    tagname = "v{0}".format(lishoginet.__version__)
     guessed_tagname = input(">>> Sure? Confirm tagname: ")
     if guessed_tagname != tagname:
         print("Actual tag name is: {0}".format(tagname))

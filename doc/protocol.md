@@ -1,12 +1,12 @@
 Protocol
 ========
 
-![Fishnet sequence diagram](https://raw.githubusercontent.com/niklasf/fishnet/master/doc/sequence-diagram.png)
+![Lishoginet sequence diagram](https://raw.githubusercontent.com/TheYoBots/lishoginet/master/doc/sequence-diagram.png)
 
 Client asks server:
 
 ```javascript
-POST http://lichess.org/fishnet/acquire
+POST http://lishogi.org/fishnet/acquire
 
 {
   "fishnet": {
@@ -43,7 +43,7 @@ Response with work:
   "game_id": "abcdefgh", // optional
   "position": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", // start position (X-FEN)
   "variant": "standard",
-  "moves": "e2e4 c7c5 c2c4 b8c6 g1e2 g8f6 b1c3 c6b4 g2g3 b4d3", // moves of the game (UCI)
+  "moves": "e2e4 c7c5 c2c4 b8c6 g1e2 g8f6 b1c3 c6b4 g2g3 b4d3", // moves of the game (USI)
   "nodes": 3500000, // optional limit
   "skipPositions": [1, 4, 5] // 0 is the first position
 }
@@ -60,7 +60,7 @@ The client can optionally report progress to the server, by sending null for
 the pending moves in `analysis`.
 
 ```javascript
-POST http://lichess.org/fishnet/analysis/{work_id}
+POST http://lishogi.org/fishnet/analysis/{work_id}
 
 {
   "fishnet": {
@@ -69,8 +69,8 @@ POST http://lichess.org/fishnet/analysis/{work_id}
     "apikey": "XXX"
   },
   "stockfish": {
-    "name": "Stockfish 7 64",
-    "author": "T. Romstad, M. Costalba, J. Kiiski, G. Linscott"
+    "name": "Fairy-Stockfish 14.1 LB",
+    "author": "Fabian Fichter"
     "options": {
       "hash": "256",
       "threads": "4"
@@ -118,7 +118,7 @@ POST http://lichess.org/fishnet/analysis/{work_id}
 Or the move:
 
 ```javascript
-POST http://lichess.org/fishnet/move/{work_id}
+POST http://lishogi.org/fishnet/move/{work_id}
 
 {
   "fishnet": {
@@ -166,7 +166,7 @@ of completing an analysis. The server can then immediately give the job to
 another client.
 
 ```
-POST http://lichess.org/fishnet/abort/{work_id}
+POST http://lishogi.org/fishnet/abort/{work_id}
 
 {
   "fishnet": {
@@ -197,7 +197,7 @@ Status
 Useful to monitor and react to queue status or spawn spot instances.
 
 ```
-GET http://lichess.org/fishnet/status
+GET http://lishogi.org/fishnet/status
 ```
 
 ```javascript
@@ -222,7 +222,7 @@ GET http://lichess.org/fishnet/status
 ```
 
 Or queue monitoring is not supported
-(for example internal [lila-fishnet](https://github.com/ornicar/lila-fishnet)):
+(for example internal for lichess [lila-fishnet](https://github.com/lichess-org/lila-fishnet)):
 
 ```
 404 Not found
@@ -232,7 +232,7 @@ Key validation
 --------------
 
 ```
-GET http://lichess.org/fishnet/key/XXX
+GET http://lishogi.org/fishnet/key/XXX
 ```
 
 Key valid:

@@ -1,20 +1,20 @@
 #!/bin/sh
 
-echo "- Getting latest Stockfish ..."
+echo "- Getting latest Fairy-Stockfish ..."
 
-if [ -d Stockfish/src ]; then
-    cd Stockfish/src
+if [ -d Fairy-Stockfish/src ]; then
+    cd Fairy-Stockfish/src
     make clean > /dev/null
     git pull
 else
-    git clone --depth 1 https://github.com/niklasf/Stockfish.git --branch fishnet
-    cd Stockfish/src
+    git clone --depth 1 https://github.com/ianfab/Fairy-Stockfish.git
+    cd Fairy-Stockfish/src
 fi
 
 echo "- Determining CPU architecture ..."
 
 ARCH="$(uname -m)"
-EXE=stockfish-"$ARCH"
+EXE=fairy-stockfish-"$ARCH"
 case "$ARCH" in
     aarch64|arm)
         ARCH=armv7
@@ -23,13 +23,13 @@ case "$ARCH" in
                 ARCH=armv8
             fi
         fi
-        EXE=stockfish-"$ARCH"
+        EXE=fairy-stockfish-"$ARCH"
         ;;
     x86_64)
         ARCH=x86-64
         ;;
     i*86)
-        # Assuming that everyone trying to run fishnet has SSE
+        # Assuming that everyone trying to run lishoginet has SSE
         ARCH=x86-32
         ;;
     ppc|ppcle)
@@ -52,13 +52,13 @@ if [ "$ARCH" = "x86-64" ]; then
     if [ -f /proc/cpuinfo ]; then
         if grep "^flags" /proc/cpuinfo | grep -q popcnt ; then
             ARCH=x86-64-modern
-            EXE=stockfish-x86_64-modern
+            EXE=fairy-stockfish-x86_64-modern
         fi
 
         if grep "^vendor_id" /proc/cpuinfo | grep -q Intel ; then
             if grep "^flags" /proc/cpuinfo | grep bmi2 | grep -q popcnt ; then
                 ARCH=x86-64-bmi2
-                EXE=stockfish-x86_64-bmi2
+                EXE=fairy-stockfish-x86_64-bmi2
             fi
        fi
     fi

@@ -2,8 +2,8 @@ FROM python:slim
 
 LABEL maintainer "Manuel Klemenz <manuel.klemenz@gmail.com>"
 
-WORKDIR /tmp/fishnet/
+WORKDIR /tmp/lishoginet/
 RUN pip install dumb-init && \
-    pip install fishnet
+    pip install lishoginet
 
-ENTRYPOINT ["dumb-init", "--", "python", "-m", "fishnet", "--no-conf"]
+ENTRYPOINT ["dumb-init", "--", "python", "-m", "lishoginet", "--no-conf"]

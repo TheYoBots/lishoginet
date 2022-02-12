@@ -1,19 +1,16 @@
-fishnet: distributed Stockfish analysis for lichess.org
-=======================================================
+lishoginet: distributed Fairy-Stockfish analysis for lishogi.org
+================================================================
 
-.. image:: https://badge.fury.io/py/fishnet.svg
-    :target: https://pypi.python.org/pypi/fishnet
+.. image:: https://badge.fury.io/py/lishoginet.svg
+    :target: https://pypi.python.org/pypi/lishoginet
     :alt: pypi package
 
-.. image:: https://travis-ci.org/niklasf/fishnet.svg?branch=master
-    :target: https://travis-ci.org/niklasf/fishnet
-    :alt: build
+Based on `lichess-org/fishnet@824bfe4 <https://github.com/lichess-org/fishnet/commit/824bfe43e6096e908fd1bae3947b98df0f48b9df/>`_
 
 Installation
 ------------
 
-1. Request your personal fishnet key: https://lichess.org/get-fishnet
-2. Install the fishnet client.
+1. Install the lishoginet client.
 
    **Via pip**
 
@@ -21,21 +18,21 @@ Installation
 
    ::
 
-       pip install --upgrade --user fishnet
+       pip install --upgrade --user lishoginet
 
    Example usage:
 
    ::
 
-       python -m fishnet --auto-update
+       python -m lishoginet --auto-update
 
    Other useful commands:
 
    ::
 
-       python -m fishnet configure  # Rerun the configuration dialog
-       python -m fishnet systemd  # Generate a systemd service file
-       python -m fishnet --help  # List all commands and options
+       python -m lishoginet configure  # Rerun the configuration dialog
+       python -m lishoignet systemd  # Generate a systemd service file
+       python -m lishoginet --help  # List all commands and options
 
    **Via Docker**
 
@@ -47,8 +44,8 @@ Installation
 
        docker run mklemenz/fishnet --key MY_APIKEY --auto-update
 
-Video tutorial
---------------
+Lichess' Video tutorial
+-----------------------
 
 .. image:: https://img.youtube.com/vi/iPRNluVn22w/0.jpg
     :target: https://www.youtube.com/watch?v=iPRNluVn22w
@@ -57,29 +54,29 @@ Video tutorial
 FAQ
 ---
 
-Which engine does fishnet use?
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Which engine does lishoginet use?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-fishnet is using
-`a fork of Stockfish <https://github.com/niklasf/Stockfish/tree/fishnet>`__
-(hence the name) with multi-variant support
-by `@ddugovic, @ianfab et al <https://github.com/ddugovic/Stockfish>`_.
+lishoginet is using
+`a fork of Stockfish called Fairy Stockfish <https://github.com/ianfab/Stockfish>`_
+which supports both shogi and shogi variants
+by `@ianfab <https://github.com/ianfab>`_.
 
-You can build Stockfish yourself (for example with ``./build-stockfish.sh``)
-and provide the path using ``python -m fishnet --stockfish-command``. Otherwise
+You can build Fairy-Stockfish yourself (for example with ``./build-stockfish.sh``)
+and provide the path using ``python -m lishoginet --stockfish-command``. Otherwise
 a precompiled binary will be downloaded for you.
 
 What are the requirements?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* Precompiled Stockfish binaries available for Linux, Windows and OS X on
+* Precompiled Fairy-Stockfish binaries available for Linux, Windows and OS X on
   Intel and AMD CPUs
 * Python 3.3+ or 2.7
 * Will max out the number of configured CPU cores
 * Uses a default of 256 MiB RAM per engine process, spawns one process for
   each group of ~3 cores
 * A small amount of disk space
-* Low-bandwidth network communication with Lichess servers
+* Low-bandwidth network communication with Lishogi servers
   (only outgoing HTTP requests, so probably no firewall configuration
   required)
 
@@ -96,24 +93,23 @@ What happens if I stop my client?
 
 Feel free to turn your client on and off at any time. By default, the client
 will try to finish any jobs it has already started. On immediate shutdown,
-the client tries to inform Lichess that jobs should be reassigned.
+the client tries to inform Lishogi that jobs should be reassigned.
 If even that fails,
-Lichess will reassign the jobs after a timeout.
+Lishogi will reassign the jobs after a timeout.
 
-Will fishnet use my GPU?
-^^^^^^^^^^^^^^^^^^^^^^^^
+Will lishoginet use my GPU?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-No, Stockfish is a classical alpha-beta engine. (Supporting Lc0 analysis is
-a future prospect.)
+No, Fairy-Stockfish is a classical alpha-beta engine.
 
-Is fishnet secure?
-^^^^^^^^^^^^^^^^^^
+Is lishoginet secure?
+^^^^^^^^^^^^^^^^^^^^^
 
 To the best of our knowledge. All network communication uses modern TLS.
 However you implicitly trust the authors, PyPI infrastructure when running with
-``--auto-update``, the CI infrastructure when using precompiled Stockfish
-binaries, and Lichess to not exploit potential vulnerabilities in Stockfish's
-UCI implementation. You can mitigate all of these by running fishnet as an
+``--auto-update``, the CI infrastructure when using precompiled Fairy-Stockfish
+binaries, and Lishogi to not exploit potential vulnerabilities in Fairy-Stockfish's
+USI implementation. You can mitigate all of these by running lishoginet as an
 unprivileged user.
 
 Is there a leaderboard of contributors?
@@ -121,28 +117,27 @@ Is there a leaderboard of contributors?
 
 No, sorry, not publically. It would incentivize gaming the metrics.
 
-
 Is there a Docker image?
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 Yes, see the installation instructions above.
 
-Can I autoscale fishnet in the cloud?
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Can I autoscale lishoginet in the cloud?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 There is currently no ready-made solution, but
-`an API for monitoring the job queue status <https://github.com/niklasf/fishnet/blob/master/doc/protocol.md#status>`_
+`an API for monitoring the job queue status <https://github.com/TheYoBots/lishoginet/blob/master/doc/protocol.md#status>`_
 is provided.
 
 Protocol
 --------
 
-.. image:: https://raw.githubusercontent.com/niklasf/fishnet/master/doc/sequence-diagram.png
+.. image:: https://raw.githubusercontent.com/TheYoBots/lishoginet/master/doc/sequence-diagram.png
 
-See `protocol.md <https://github.com/niklasf/fishnet/blob/master/doc/protocol.md>`_ for details.
+See `protocol.md <https://github.com/TheYoBots/lishoginet/blob/master/doc/protocol.md>`_ for details.
 
 License
 -------
 
-fishnet is licensed under the GPLv3+. See LICENSE.txt for the full
+lishoginet is licensed under the GPLv3+. See LICENSE.txt for the full
 license text.

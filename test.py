@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# This file is part of the lichess.org fishnet client.
-# Copyright (C) 2016-2019 Niklas Fiekas <niklas.fiekas@backscattering.de>
+# This file is part of the lishogi.org lishoginet client.
+# Copyright (C) 2016-2020 Niklas Fiekas <niklas.fiekas@backscattering.de>
+# Copyright (C) 2022- TheYoBots (for lishogi) <contact@lishogi.org>
 # See LICENSE.txt for licensing information.
 
-import fishnet
+import lishoginet
 import unittest
 import sys
 import multiprocessing
@@ -16,19 +17,19 @@ except ImportError:
     import ConfigParser as configparser
 
 
-STARTPOS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+STARTPOS = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1"
 
 
 class WorkerTest(unittest.TestCase):
 
     def setUp(self):
         conf = configparser.ConfigParser()
-        conf.add_section("Fishnet")
-        conf.set("Fishnet", "Key", "testkey")
+        conf.add_section("Lishoginet")
+        conf.set("Lishoginet", "Key", "testkey")
 
-        fishnet.get_stockfish_command(conf, update=True)
+        lishoginet.get_stockfish_command(conf, update=True)
 
-        self.worker = fishnet.Worker(conf,
+        self.worker = lishoginet.Worker(conf,
             threads=multiprocessing.cpu_count(),
             memory=32,
             user_backlog=0,
@@ -49,13 +50,13 @@ class WorkerTest(unittest.TestCase):
             "game_id": "hgfedcba",
             "variant": "standard",
             "position": STARTPOS,
-            "moves": "f2f3 e7e6 g2g4",
+            "moves": "2g2f 5a4b 2f2e 4b3b 2e2d 8b4b",
         }
 
         response = self.worker.bestmove(job)
-        self.assertEqual(response["move"]["bestmove"], "d8h4")
+        self.assertEqual(response["move"]["bestmove"], "P*2c+")
 
-    def test_zh_bestmove(self):
+    def test_minishogi_bestmove(self):
         job = {
             "work": {
                 "type": "move",
@@ -63,29 +64,13 @@ class WorkerTest(unittest.TestCase):
                 "level": 1,
             },
             "game_id": "ihihihih",
-            "variant": "crazyhouse",
-            "position": "rnbqk1nr/ppp2ppp/3b4/3N4/4p1PP/5P2/PPPPP3/R1BQKBNR/P b KQkq - 9 5",
-            "moves": "d6g3",
+            "variant": "minishogi",
+            "position": "rbsgk/4p/5/P4/KGSBR b - 1",
+            "moves": "4e4d",
         }
 
         response = self.worker.bestmove(job)
-        self.assertEqual(response["move"]["bestmove"], "P@f2") # only move
-
-    def test_3check_bestmove(self):
-        job = {
-            "work": {
-                "type": "move",
-                "id": "3c3c3c3c",
-                "level": 8,
-            },
-            "game_id": "c3c3c3c3",
-            "variant": "threecheck",
-            "position": "r1b1kbnr/pppp1ppp/2n2q2/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 4 4 +2+0",
-            "moves": "f1c4 d7d6",
-        }
-
-        response = self.worker.bestmove(job)
-        self.assertEqual(response["move"]["bestmove"], "c4f7")
+        self.assertEqual(response["move"]["bestmove"], "4a3b") # only move
 
     def test_analysis(self):
         job = {
@@ -96,7 +81,7 @@ class WorkerTest(unittest.TestCase):
             "game_id": "87654321",
             "variant": "standard",
             "position": STARTPOS,
-            "moves": "f2f3 e7e6 g2g4 d8h4",
+            "moves": "2g2f 5a4b 2f2e 4b3b 2e2d 8b4b P*2c+",
             "skipPositions": [1],
         }
 
@@ -108,61 +93,34 @@ class WorkerTest(unittest.TestCase):
         self.assertTrue(result[1]["skipped"])
 
         self.assertEqual(result[3]["score"]["mate"], 1)
-        self.assertTrue(result[3]["pv"].startswith("d8h4"))
+        self.assertTrue(result[3]["pv"].startswith("P*2c+"))
 
         self.assertEqual(result[4]["score"]["mate"], 0)
-
-    def test_analysis_contempt(self):
-        fishnet.setoption(self.worker.stockfish, "Threads", 1)
-
-        job = {
-            "work": {
-                "type": "analysis",
-                "id": "contempt 100",
-            },
-            "variant": "standard",
-            "position": STARTPOS,
-            "moves": "d2d4 d7d5",
-            "skipPositions": [0, 1],
-            "nodes": 1000,
-        }
-
-        fishnet.setoption(self.worker.stockfish, "Contempt", 100)
-
-        response = self.worker.analysis(job)
-        cp_100 = response["analysis"][2]["score"]["cp"]
-
-        job["work"]["id"] = "contempt 0"
-        fishnet.setoption(self.worker.stockfish, "Contempt", 0)
-        response = self.worker.analysis(job)
-        cp_0 = response["analysis"][2]["score"]["cp"]
-
-        self.assertEqual(cp_100, cp_0)
 
 
 class UnitTests(unittest.TestCase):
 
     def test_parse_bool(self):
-        self.assertEqual(fishnet.parse_bool("yes"), True)
-        self.assertEqual(fishnet.parse_bool("no"), False)
-        self.assertEqual(fishnet.parse_bool(""), False)
-        self.assertEqual(fishnet.parse_bool("", default=True), True)
+        self.assertEqual(lishoginet.parse_bool("yes"), True)
+        self.assertEqual(lishoginet.parse_bool("no"), False)
+        self.assertEqual(lishoginet.parse_bool(""), False)
+        self.assertEqual(lishoginet.parse_bool("", default=True), True)
 
     def test_parse_duration(self):
-        self.assertEqual(fishnet.parse_duration("1m"), 60)
-        self.assertEqual(fishnet.parse_duration("2 s"), 2)
+        self.assertEqual(lishoginet.parse_duration("1m"), 60)
+        self.assertEqual(lishoginet.parse_duration("2 s"), 2)
 
     def test_encode_score(self):
-        self.assertEqual(fishnet.decode_score(fishnet.encode_score("cp", 42)), {"cp": 42})
-        self.assertEqual(fishnet.decode_score(fishnet.encode_score("mate", -1)), {"mate": -1})
-        self.assertEqual(fishnet.decode_score(fishnet.encode_score("mate", 0)), {"mate": 0})
-        self.assertEqual(fishnet.decode_score(fishnet.encode_score("mate", 1)), {"mate": 1})
+        self.assertEqual(lishoginet.decode_score(lishoginet.encode_score("cp", 42)), {"cp": 42})
+        self.assertEqual(lishoginet.decode_score(lishoginet.encode_score("mate", -1)), {"mate": -1})
+        self.assertEqual(lishoginet.decode_score(lishoginet.encode_score("mate", 0)), {"mate": 0})
+        self.assertEqual(lishoginet.decode_score(lishoginet.encode_score("mate", 1)), {"mate": 1})
 
 
 if __name__ == "__main__":
     if "-v" in sys.argv or "--verbose" in sys.argv:
-        fishnet.setup_logging(3)
+        lishoginet.setup_logging(3)
     else:
-        fishnet.setup_logging(0)
+        lishoginet.setup_logging(0)
 
     unittest.main()
