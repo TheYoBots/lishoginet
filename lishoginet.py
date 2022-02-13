@@ -435,6 +435,30 @@ def setoption(p, name, value):
     send(p, "setoption name %s value %s" % (name, value))
 
 
+# lishogi uses chess coordinates internally, so we change coords into usi format for the engine
+def ucitousi(moves, string = False):
+	transtable = {97: 57, 98: 56, 99: 55, 100: 54, 101: 53, 102: 52, 103: 51, 104: 50, 105: 49 }
+	transtable.update({v: k for k, v in transtable.items()})
+	if string:
+		return moves.translate(transtable)
+	return [m.translate(transtable) for m in moves]
+
+
+# lishogi used to send pgn role symbol instead of +
+def fixpromotion(moves, string = False):
+	newmoves = []
+	if string:
+		if len(moves) == 5:
+			return moves[:4] + '+'
+		else:
+			return moves
+	for m in moves:
+		if len(m) == 5:
+			newmoves.append(m[:4] + '+')
+		else: newmoves.append(m)
+	return newmoves
+
+
 def go(p, position, moves, movetime=None, clock=None, depth=None, nodes=None):
     send(p, "position sfen %s moves %s" % (position, " ".join(moves)))
 
@@ -471,7 +495,7 @@ def recv_bestmove(p):
         if command == "bestmove":
             bestmove = arg.split()[0]
             if bestmove and bestmove != "(none)":
-                return bestmove
+                return ucitousi(bestmove, True)
             else:
                 return None
         elif command == "info":
@@ -901,6 +925,7 @@ class Worker(threading.Thread):
         lvl = job["work"]["level"]
         variant = job.get("variant", "standard")
         moves = job["moves"].split(" ")
+        moves = ucitousi(fixpromotion(moves))
 
         logging.debug("Playing %s (%s) with lvl %d",
                       self.job_name(job), variant, lvl)
@@ -939,6 +964,7 @@ class Worker(threading.Thread):
     def analysis(self, job):
         variant = job.get("variant", "standard")
         moves = job["moves"].split(" ")
+        moves = ucitousi(fixpromotion(moves))
 
         result = self.make_request()
         start = last_progress_report = time.time()
