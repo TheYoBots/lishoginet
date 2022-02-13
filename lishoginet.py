@@ -96,7 +96,7 @@ except NameError:
     DEAD_ENGINE_ERRORS = (EOFError, IOError)
 
 
-__version__ = "0.1"  # remember to update changelog
+__version__ = "2.0.0"  # remember to update changelog
 
 __author__ = "Yohaan Nathan"
 __email__ = "yohaan.nathanjw@gmail.com"
@@ -862,7 +862,7 @@ class Worker(threading.Thread):
 
     def make_request(self):
         return {
-            "lishoginet": {
+            "fishnet": {
                 "version": __version__,
                 "python": platform.python_version(),
                 "apikey": get_key(self.conf),
@@ -1185,11 +1185,11 @@ def stockfish_filename():
         suffix = ""
 
     if os.name == "nt":
-        return "stockfish-windows-%s%s.exe" % (machine, suffix)
+        return "fairy-stockfish-windows-%s%s.exe" % (machine, suffix)
     elif os.name == "os2" or sys.platform == "darwin":
-        return "stockfish-osx-%s" % machine
+        return "fairy-stockfish-osx-%s" % machine
     elif os.name == "posix":
-        return "stockfish-%s%s" % (machine, suffix)
+        return "fairy-stockfish-%s%s" % (machine, suffix)
 
 
 def download_github_release(conf, release_page, filename):
@@ -1522,7 +1522,7 @@ def configure(args):
         # Key
         if key is None:
             status = "https://lishogi.org/get-fishnet" if is_production_endpoint(conf) else "probably not required"
-            key = config_input("Personal lishoginet key (append ! to force): "
+            key = config_input("Personal lishoginet key (append ! to force): ",
                                lambda v: validate_key(v, conf, network=True), out)
     else:
         key = validate_key(args.key, conf, network=True)
@@ -1763,7 +1763,9 @@ def get_endpoint(conf, sub=""):
 def is_production_endpoint(conf):
     endpoint = validate_endpoint(conf_get(conf, "Endpoint"))
     hostname = urlparse.urlparse(endpoint).hostname
-    return hostname == "lishogi".org" or hostname.endswith(".lishogi.org")
+    return hostname == "lichess.org" or hostname.endswith(".lichess.org")
+    #key not required for lishoginet (yet)
+    #return hostname == "lishogi.org" or hostname.endswith(".lishogi.org")
 
 
 def get_key(conf):
