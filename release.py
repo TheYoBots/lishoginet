@@ -28,7 +28,6 @@ def check_git():
 
 def test():
     print("--- TEST -------------------------------------------------------------")
-    system("python2 test.py")
     system("python3 test.py")
 
 
@@ -54,7 +53,7 @@ def pypi():
     system("rm -rf build")
     system("python3 setup.py sdist bdist_wheel --universal")
     system("twine check dist/*")
-    system("twine upload --skip-existing --sign dist/*")
+    system("twine upload --skip-existing dist/*")
 
 
 if __name__ == "__main__":

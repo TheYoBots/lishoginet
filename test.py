@@ -49,12 +49,12 @@ class WorkerTest(unittest.TestCase):
             },
             "game_id": "hgfedcba",
             "variant": "standard",
-            "position": STARTPOS,
-            "moves": "2g2f 5a4b 2f2e 4b3b 2e2d 8b4b",
+            "position": "lnsg1gsnl/1r4kb1/ppppppppp/7P1/9/9/PPPPPPP1P/1B5R1/LNSGKGSNL w - 1",
+            "moves": "b8f8",
         }
 
         response = self.worker.bestmove(job)
-        self.assertEqual(response["move"]["bestmove"], "P*2c+")
+        self.assertEqual(response["move"]["bestmove"], "h6h7+")
 
     def test_minishogi_bestmove(self):
         job = {
@@ -65,12 +65,12 @@ class WorkerTest(unittest.TestCase):
             },
             "game_id": "ihihihih",
             "variant": "minishogi",
-            "position": "rbsgk/4p/5/P4/KGSBR b - 1",
-            "moves": "4e4d",
+            "position": "r3k/2r2/KB1Ps/P4/2s2 b BGg 1",
+            "moves": "b3a4",
         }
 
         response = self.worker.bestmove(job)
-        self.assertEqual(response["move"]["bestmove"], "4a3b") # only move
+        self.assertEqual(response["move"]["bestmove"], "G*e8") # only move
 
     def test_analysis(self):
         job = {
@@ -81,7 +81,7 @@ class WorkerTest(unittest.TestCase):
             "game_id": "87654321",
             "variant": "standard",
             "position": STARTPOS,
-            "moves": "2g2f 5a4b 2f2e 4b3b 2e2d 8b4b P*2c+",
+            "moves": "h3h4 e9f8 h4h5 f8g8 h5h6 b8f8",
             "skipPositions": [1],
         }
 
@@ -92,10 +92,10 @@ class WorkerTest(unittest.TestCase):
 
         self.assertTrue(result[1]["skipped"])
 
-        self.assertEqual(result[3]["score"]["mate"], 1)
-        self.assertTrue(result[3]["pv"].startswith("P*2c+"))
+        self.assertTrue(0 <= result[0]["score"]["cp"] <= 90)
+        self.assertFalse(result[3]["pv"].startswith("h5h7+"))
 
-        self.assertEqual(result[4]["score"]["mate"], 0)
+        self.assertTrue(result[4]["score"]["cp"] >= 0)
 
 
 class UnitTests(unittest.TestCase):

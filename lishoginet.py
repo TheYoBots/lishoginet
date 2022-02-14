@@ -104,7 +104,7 @@ __license__ = "GPLv3+"
 
 DEFAULT_CONFIG = "lishoginet.ini"
 DEFAULT_ENDPOINT = "https://lishogi.org/fishnet/"
-STOCKFISH_RELEASES = "https://api.github.com/repos/ianfab/Fairy-Stockfish/releases/latest"
+STOCKFISH_RELEASES = "https://api.github.com/repos/TheYoBots/Fairy-Stockfish/releases/latest"
 DEFAULT_THREADS = 8
 HASH_MIN = 16
 HASH_DEFAULT = 256

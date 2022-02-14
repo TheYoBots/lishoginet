@@ -36,13 +36,14 @@ Installation
 
    **Via Docker**
 
-   There is a `Docker container <https://hub.docker.com/r/mklemenz/fishnet/>`_
+   There is a `Docker container <https://github.com/TheYoBots/lishoginet/blob/master/Dockerfile/>`_
    courtesy of `@mklemenz <https://github.com/mklemenz>`_. For example you can
    simply do:
 
    ::
 
-       docker run mklemenz/fishnet --key MY_APIKEY --auto-update
+       docker build -t lishoginet:latest .
+       docker run -it lishoginet:latest
 
 Lichess' Video tutorial
 -----------------------
