@@ -1,7 +1,5 @@
 FROM python:slim
+COPY . .
 
-WORKDIR /tmp/lishoginet/
-RUN pip install dumb-init && \
+RUN pip install requests && \
     pip install lishoginet
-
-ENTRYPOINT ["dumb-init", "--", "python", "-m", "lishoginet", "--no-conf"]
