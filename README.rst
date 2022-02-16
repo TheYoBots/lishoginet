@@ -1,9 +1,13 @@
 lishoginet: distributed Fairy-Stockfish analysis for lishogi.org
 ================================================================
 
+.. image:: https://github.com/TheYoBots/lishoginet/workflows/Build/badge.svg
+    :target: https://github.com/TheYoBots/lishoginet/actions
+    :alt: Test status
+
 .. image:: https://badge.fury.io/py/lishoginet.svg
     :target: https://pypi.python.org/pypi/lishoginet
-    :alt: pypi package
+    :alt: PyPi Package
 
 Based on `lichess-org/fishnet@824bfe4 <https://github.com/lichess-org/fishnet/commit/824bfe43e6096e908fd1bae3947b98df0f48b9df/>`_
 
@@ -72,7 +76,7 @@ What are the requirements?
 
 * Precompiled Fairy-Stockfish binaries available for Linux, Windows and OS X on
   Intel and AMD CPUs
-* Python 3.3+ or 2.7
+* Python 3.7+
 * Will max out the number of configured CPU cores
 * Uses a default of 256 MiB RAM per engine process, spawns one process for
   each group of ~3 cores
