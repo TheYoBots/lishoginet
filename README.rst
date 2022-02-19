@@ -35,7 +35,7 @@ Installation
    ::
 
        python3 -m lishoginet configure  # Rerun the configuration dialog
-       python3 -m lishoignet systemd  # Generate a systemd service file
+       python3 -m lishogi systemd  # Generate a systemd service file
        python3 -m lishoginet --help  # List all commands and options
 
    **Via Docker**
