@@ -28,15 +28,15 @@ Installation
 
    ::
 
-       python -m lishoginet --auto-update
+       python3 -m lishoginet --auto-update
 
    Other useful commands:
 
    ::
 
-       python -m lishoginet configure  # Rerun the configuration dialog
-       python -m lishoignet systemd  # Generate a systemd service file
-       python -m lishoginet --help  # List all commands and options
+       python3 -m lishoginet configure  # Rerun the configuration dialog
+       python3 -m lishoignet systemd  # Generate a systemd service file
+       python3 -m lishoginet --help  # List all commands and options
 
    **Via Docker**
 
