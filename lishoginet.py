@@ -488,94 +488,73 @@ def go(p, position, moves, movetime=None, clock=None, depth=None, nodes=None):
 
     send(p, " ".join(builder))
 
+    info = {}
+    info["bestmove"] = None
 
-def recv_bestmove(p):
     while True:
         command, arg = recv_usi(p)
+
         if command == "bestmove":
             bestmove = arg.split()[0]
             if bestmove and bestmove != "(none)":
-                return ucitousi(bestmove, True)
-            else:
-                return None
+                info["bestmove"] = ucitousi(bestmove, True)
+            return info
         elif command == "info":
-            continue
-        else:
-            logging.warning("Unexpected engine response to go: %s %s", command, arg)
+            arg = arg or ""
 
+            # Parse all other parameters
+            score_kind, score_value, lowerbound, upperbound = None, None, False, False
+            current_parameter = None
+            for token in arg.split(" "):
+                if current_parameter == "string":
+                    # Everything until the end of line is a string
+                    if "string" in info:
+                        info["string"] += " " + token
+                    else:
+                        info["string"] = token
+                elif token == "score":
+                    current_parameter = "score"
+                elif token == "pv":
+                    current_parameter = "pv"
+                    if info.get("multipv", 1) == 1:
+                        info.pop("pv", None)
+                elif token in ["depth", "seldepth", "time", "nodes", "multipv",
+                               "currmove", "currmovenumber",
+                               "hashfull", "nps", "tbhits", "cpuload",
+                               "refutation", "currline", "string"]:
+                    current_parameter = token
+                    info.pop(current_parameter, None)
+                elif current_parameter in ["depth", "seldepth", "time",
+                                           "nodes", "currmovenumber",
+                                           "hashfull", "nps", "tbhits",
+                                           "cpuload", "multipv"]:
+                    # Integer parameters
+                    info[current_parameter] = int(token)
+                elif current_parameter == "score":
+                    # Score
+                    if token in ["cp", "mate"]:
+                        score_kind = token
+                        score_value = None
+                    elif token == "lowerbound":
+                        lowerbound = True
+                    elif token == "upperbound":
+                        upperbound = True
+                    else:
+                        score_value = int(token)
+                elif current_parameter != "pv" or info.get("multipv", 1) == 1:
+                    # Strings
+                    if current_parameter in info:
+                        info[current_parameter] += " " + token
+                    else:
+                        info[current_parameter] = token
 
-def encode_score(kind, value):
-    if kind == "mate":
-        if value > 0:
-            return 32000 - value
-        else:
-            return -32000 - value
-    elif kind == "cp":
-        return min(max(value, -30000), 30000)
-
-
-def decode_score(score):
-    if score > 30000:
-        return {"mate": 32000 - score}
-    elif score < -30000:
-        return {"mate": -32000 - score}
-    else:
-        return {"cp": score}
-
-
-def recv_analysis(p):
-    scores = []
-    nodes = []
-    times = []
-    pvs = []
-
-    bound = []
-
-    while True:
-        command, arg = recv_usi(p)
-
-        if command == "bestmove":
-            return scores, nodes, times, pvs
-        elif command == "info":
-            depth = None
-            multipv = 1
-
-            def set_table(arr, value):
-                while len(arr) < multipv:
-                    arr.append([])
-                while len(arr[multipv - 1]) <= depth:
-                    arr[multipv - 1].append(None)
-                arr[multipv - 1][depth] = value
-
-            tokens = (arg or "").split(" ")
-            while tokens:
-                parameter = tokens.pop(0)
-
-                if parameter == "multipv":
-                    multipv = int(tokens.pop(0))
-                elif parameter == "depth":
-                    depth = int(tokens.pop(0))
-                elif parameter == "nodes":
-                    set_table(nodes, int(tokens.pop(0)))
-                elif parameter == "time":
-                    set_table(times, int(tokens.pop(0)))
-                elif parameter == "score":
-                    kind = tokens.pop(0)
-                    value = encode_score(kind, int(tokens.pop(0)))
-
-                    is_bound = False
-                    if tokens and tokens[0] in ["lowerbound", "upperbound"]:
-                        is_bound = True
-                        tokens.pop(0)
-
-                    was_bound = depth is None or len(bound) < multipv or len(bound[multipv - 1]) <= depth or bound[multipv - 1][depth]
-                    set_table(bound, is_bound)
-
-                    if was_bound or not is_bound:
-                        set_table(scores, value)
-                elif parameter == "pv":
-                    set_table(pvs, " ".join(tokens))
-                    break
+            # Set score. Prefer scores that are not just a bound
+            if score_kind and score_value is not None and (not (lowerbound or upperbound) or "score" not in info or info["score"].get("lowerbound") or info["score"].get("upperbound")):
+                info["score"] = {score_kind: score_value}
+                if lowerbound:
+                    info["score"]["lowerbound"] = lowerbound
+                if upperbound:
+                    info["score"]["upperbound"] = upperbound
         else:
             logging.warning("Unexpected engine response to go: %s %s", command, arg)
 
@@ -934,30 +913,29 @@ class Worker(threading.Thread):
         setoption(self.stockfish, "USI_LimitStrength", lvl < 8)
         setoption(self.stockfish, "USI_Elo", LVL_ELO[lvl - 1])
         setoption(self.stockfish, "USI_AnalyseMode", False)
-        setoption(self.stockfish, "USI_MultiPV", 1)
         send(self.stockfish, "usinewgame")
         isready(self.stockfish)
 
         movetime = int(round(LVL_MOVETIMES[lvl - 1] / (self.threads * 0.9 ** (self.threads - 1))))
 
         start = time.time()
-        go(self.stockfish, job["position"], moves,
-           movetime=movetime, clock=job["work"].get("clock"),
-           depth=LVL_DEPTHS[lvl - 1])
-        bestmove = recv_bestmove(self.stockfish)
+        part = go(self.stockfish, job["position"], moves,
+                  depth=LVL_DEPTHS[lvl - 1],
+                  movetime=movetime, clock=job["work"].get("clock"))
         end = time.time()
 
-        logging.log(PROGRESS, "Played move in %s (%s) with lvl %d: %0.3fs elapsed",
+        logging.log(PROGRESS, "Played move in %s (%s) with lvl %d: %0.3fs elapsed, depth %d",
                     self.job_name(job), variant,
-                    lvl, end - start)
+                    lvl, end - start, part.get("depth", 0))
 
         self.slow = 0.1  # move clients are trusted to be fast
 
+        self.nodes += part.get("nodes", 0)
         self.positions += 1
 
         result = self.make_request()
         result["move"] = {
-            "bestmove": bestmove,
+            "bestmove": part["bestmove"],
         }
         return result
 
@@ -967,38 +945,27 @@ class Worker(threading.Thread):
         moves = ucitousi(fixpromotion(moves))
 
         result = self.make_request()
+        result["analysis"] = [None for _ in range(len(moves) + 1)]
         start = last_progress_report = time.time()
-
-        multipv = job.get("multipv")
-        skip = job.get("skipPositions", [])
 
         set_variant_options(self.stockfish, variant)
         setoption(self.stockfish, "USI_LimitStrength", False)
         setoption(self.stockfish, "USI_AnalyseMode", True)
-        setoption(self.stockfish, "USI_MultiPV", multipv or 1)
 
         send(self.stockfish, "usinewgame")
         isready(self.stockfish)
 
-        if multipv is None:
-            result["analysis"] = [None for _ in range(len(moves) + 1)]
-        else:
-            result["analysis"] = {
-                "time": [[] for _ in range(len(moves) + 1)],
-                "nodes": [[] for _ in range(len(moves) + 1)],
-                "score": [[] for _ in range(len(moves) + 1)],
-                "pv": [[] for _ in range(len(moves) + 1)],
-            }
+        nodes = job.get("nodes") or 3500000
+        skip = job.get("skipPositions", [])
 
         num_positions = 0
 
         for ply in range(len(moves), -1, -1):
             if ply in skip:
-                if multipv is None:
-                    result["analysis"][ply] = {"skipped": True}
+                result["analysis"][ply] = {"skipped": True}
                 continue
 
-            if multipv is None and last_progress_report + PROGRESS_REPORT_INTERVAL < time.time():
+            if last_progress_report + PROGRESS_REPORT_INTERVAL < time.time():
                 if self.progress_reporter:
                     self.progress_reporter.send(job, result)
                 last_progress_report = time.time()
@@ -1006,41 +973,21 @@ class Worker(threading.Thread):
             logging.log(PROGRESS, "Analysing %s: %s",
                         variant, self.job_name(job, ply))
 
-            go(self.stockfish, job["position"], moves[0:ply],
-               nodes=job.get("nodes") or 3500000,
-               movetime=int(MAX_MOVE_TIME * 1000),
-               depth=job.get("depth"))
-            scores, nodes, times, pvs = recv_analysis(self.stockfish)
+            part = go(self.stockfish, job["position"], moves[0:ply],
+                      nodes=nodes, movetime=int(MAX_MOVE_TIME * 1000))
 
-            if multipv is None:
-                depth = len(scores[0]) - 1
-                result["analysis"][ply] = {
-                    "depth": depth,
-                    "score": decode_score(scores[0][depth]),
-                }
-                try:
-                    result["analysis"][ply]["nodes"] = n = nodes[0][depth]
-                    result["analysis"][ply]["time"] = t = times[0][depth]
-                    if t > 200:
-                        result["analysis"][ply]["nps"] = n * 1000 // t
-                except IndexError:
-                    pass
-                try:
-                    result["analysis"][ply]["pv"] = pvs[0][depth]
-                except IndexError:
-                    pass
-            else:
-                result["analysis"]["time"][ply] = times
-                result["analysis"]["nodes"][ply] = nodes
-                result["analysis"]["score"][ply] = scores
-                result["analysis"]["pv"][ply] = pvs
+            if part["score"].get("cp") and "time" in part and part["time"] < 100:
+                logging.warning("Very low time reported: %d ms.", part["time"])
 
-            try:
-                self.nodes += nodes[0][-1]
-            except IndexError:
-                pass
+            if "nps" in part and part["nps"] >= 100000000:
+                logging.warning("Dropping exorbitant nps: %d", part["nps"])
+                del part["nps"]
+
+            self.nodes += part.get("nodes", 0)
             self.positions += 1
             num_positions += 1
+
+            result["analysis"][ply] = part
 
         end = time.time()
 
@@ -1049,12 +996,12 @@ class Worker(threading.Thread):
             logging.info("%s took %0.1fs (%0.1fs per position)",
                          self.job_name(job),
                          end - start, t)
-            if t > 0.95 * MAX_MOVE_TIME * (multipv or 1):
+            if t > 0.95 * MAX_MOVE_TIME:
                 logging.warning("Extremely slow (%0.1fs per position). If this happens frequently, it is better to stop and defer to clients with better hardware.", t)
-            elif t > TARGET_MOVE_TIME * (multipv or 1) + 0.1 and self.slow < MAX_SLOW_BACKOFF:
+            elif t > TARGET_MOVE_TIME + 0.1 and self.slow < MAX_SLOW_BACKOFF:
                 self.slow = min(self.slow * 2, MAX_SLOW_BACKOFF)
                 logging.info("Slower than %0.1fs per position (%0.1fs). Will accept only older user requests (backlog >= %0.1fs).", TARGET_MOVE_TIME, t, self.slow)
-            elif t < TARGET_MOVE_TIME * (multipv or 1) - 0.1 and self.slow > 0.1:
+            elif t < TARGET_MOVE_TIME - 0.1 and self.slow > 0.1:
                 self.slow = max(self.slow / 2, 0.1)
                 if self.is_alive() and self.slow > 0.5:
                     logging.info("Nice, faster than %0.1fs per position (%0.1fs)! Will accept younger user requests (backlog >= %0.1fs).", TARGET_MOVE_TIME, t, self.slow)

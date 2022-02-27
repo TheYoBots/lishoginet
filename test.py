@@ -110,12 +110,6 @@ class UnitTests(unittest.TestCase):
         self.assertEqual(lishoginet.parse_duration("1m"), 60)
         self.assertEqual(lishoginet.parse_duration("2 s"), 2)
 
-    def test_encode_score(self):
-        self.assertEqual(lishoginet.decode_score(lishoginet.encode_score("cp", 42)), {"cp": 42})
-        self.assertEqual(lishoginet.decode_score(lishoginet.encode_score("mate", -1)), {"mate": -1})
-        self.assertEqual(lishoginet.decode_score(lishoginet.encode_score("mate", 0)), {"mate": 0})
-        self.assertEqual(lishoginet.decode_score(lishoginet.encode_score("mate", 1)), {"mate": 1})
-
 
 if __name__ == "__main__":
     if "-v" in sys.argv or "--verbose" in sys.argv:
